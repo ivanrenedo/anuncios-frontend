@@ -1,0 +1,154 @@
+@import "tailwindcss";
+
+/*
+ * Market EG design system — ported from the mobile app palette
+ * (constants/theme.ts). Teal primary, blue secondary, amber tertiary.
+ */
+@theme {
+  --color-primary: #006b5e;
+  --color-primary-container: #13c1ac;
+  --color-on-primary: #ffffff;
+  --color-primary-soft: #e0f3f0;
+
+  --color-secondary: #0058bc;
+  --color-secondary-container: #0070eb;
+  --color-on-secondary: #ffffff;
+
+  --color-tertiary: #8c5000;
+  --color-tertiary-container: #fb9300;
+  --color-on-tertiary: #ffffff;
+
+  --color-danger: #ba1a1a;
+  --color-danger-soft: #ffdad6;
+
+  --color-surface: #faf9fe;
+  --color-surface-low: #f4f3f8;
+  --color-surface-lowest: #ffffff;
+  --color-surface-container: #eeedf3;
+  --color-surface-high: #e9e7ed;
+
+  --color-on-surface: #1a1b1f;
+  --color-on-surface-variant: #3c4a46;
+  --color-muted: #6c7a76;
+
+  --color-outline: #6c7a76;
+  --color-outline-variant: #bbcac5;
+
+  --font-sans: var(--font-manrope), system-ui, sans-serif;
+
+  --radius-card: 16px;
+}
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+ * Dark palette — ported from the mobile app (constants/theme.ts darkColors).
+ * Applied via `.dark` on <html>. Every semantic token swaps, so any component
+ * built on the tokens adapts automatically.
+ */
+.dark {
+  color-scheme: dark;
+  --color-primary: #13c1ac;
+  --color-primary-container: #0a9d8b;
+  --color-on-primary: #00201c;
+  --color-primary-soft: #0e2b27;
+
+  --color-secondary: #7fb0ff;
+  --color-secondary-container: #0070eb;
+  --color-on-secondary: #00316e;
+
+  --color-tertiary: #ffb874;
+  --color-tertiary-container: #fb9300;
+  --color-on-tertiary: #4a2800;
+
+  --color-danger: #ff5449;
+  --color-danger-soft: #93000a;
+
+  --color-surface: #0f1213;
+  --color-surface-low: #171a1b;
+  --color-surface-lowest: #1e2123;
+  --color-surface-container: #1c1f20;
+  --color-surface-high: #262a2b;
+
+  --color-on-surface: #e3e2e6;
+  --color-on-surface-variant: #bfc9c4;
+  --color-muted: #89938f;
+
+  --color-outline: #89938f;
+  --color-outline-variant: #3f4845;
+}
+
+/*
+ * Force the light palette for a subtree regardless of the global theme.
+ * Used by the admin panel (a light dashboard) so it stays readable even when
+ * the shop is in dark mode.
+ */
+.theme-light {
+  color-scheme: light;
+  --color-primary: #006b5e;
+  --color-primary-container: #13c1ac;
+  --color-on-primary: #ffffff;
+  --color-primary-soft: #e0f3f0;
+
+  --color-secondary: #0058bc;
+  --color-secondary-container: #0070eb;
+  --color-on-secondary: #ffffff;
+
+  --color-tertiary: #8c5000;
+  --color-tertiary-container: #fb9300;
+  --color-on-tertiary: #ffffff;
+
+  --color-danger: #ba1a1a;
+  --color-danger-soft: #ffdad6;
+
+  --color-surface: #faf9fe;
+  --color-surface-low: #f4f3f8;
+  --color-surface-lowest: #ffffff;
+  --color-surface-container: #eeedf3;
+  --color-surface-high: #e9e7ed;
+
+  --color-on-surface: #1a1b1f;
+  --color-on-surface-variant: #3c4a46;
+  --color-muted: #6c7a76;
+
+  --color-outline: #6c7a76;
+  --color-outline-variant: #bbcac5;
+}
+
+html,
+body {
+  background: var(--color-surface);
+  color: var(--color-on-surface);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Hide scrollbars for horizontal rails */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Subtle card shadow used across the app */
+.shadow-card {
+  box-shadow: 0 4px 16px rgba(16, 24, 32, 0.06);
+}
+.shadow-soft {
+  box-shadow: 0 2px 8px rgba(16, 24, 32, 0.05);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in {
+  animation: fadeIn 0.25s ease-out;
+}
