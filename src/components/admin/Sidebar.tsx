@@ -9,6 +9,7 @@ import {
   Users,
   ShieldCheck,
   BadgeCheck,
+  Crown,
   Package,
   Tags,
   Star,
@@ -23,6 +24,8 @@ import {
   Moon,
   ChevronsUpDown,
   ChevronDown,
+  Wallet,
+  ScrollText,
 } from "lucide-react";
 import { ADMIN_TOKEN_KEY, resolveImage } from "@/lib/config";
 import { ADMIN_ME } from "@/graphql/queries";
@@ -45,6 +48,8 @@ const sections: NavSection[] = [
       { href: "/admin/users", label: "Usuarios", Icon: Users },
       { href: "/admin/roles", label: "Roles", Icon: ShieldCheck },
       { href: "/admin/verifications", label: "Verificaciones", Icon: BadgeCheck },
+      { href: "/admin/plans", label: "Planes", Icon: Crown },
+      { href: "/admin/payments", label: "Pagos", Icon: Wallet },
     ],
   },
   {
@@ -59,6 +64,7 @@ const sections: NavSection[] = [
     title: "Moderación",
     items: [
       { href: "/admin/reports", label: "Reportes", Icon: Flag },
+      { href: "/admin/audit", label: "Auditoría", Icon: ScrollText },
     ],
   },
   {

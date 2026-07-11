@@ -8,6 +8,7 @@ export interface AuthUser {
   id: string;
   name: string;
   email: string;
+  suspended?: boolean;
   avatarUrl?: string | null;
   verified?: boolean;
   phone?: string | null;

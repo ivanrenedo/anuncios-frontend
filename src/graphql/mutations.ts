@@ -152,6 +152,66 @@ export const VIEW_PRODUCT = gql`
   }
 `;
 
+export const BUMP_PRODUCT = gql`
+  mutation BumpProduct($id: String!) {
+    bumpProduct(id: $id) { id bumpedAt }
+  }
+`;
+
+export const BOOST_PRODUCT = gql`
+  mutation BoostProduct($id: String!, $days: Int) {
+    boostProduct(id: $id, days: $days) { id boostedUntil }
+  }
+`;
+
+export const ADMIN_SET_PRODUCT_STATUS = gql`
+  mutation AdminSetProductStatus($id: String!, $status: String!, $reason: String) {
+    adminSetProductStatus(id: $id, status: $status, reason: $reason) { id status }
+  }
+`;
+
+export const UNBOOST_PRODUCT = gql`
+  mutation UnboostProduct($id: String!) {
+    unboostProduct(id: $id) { id boostedUntil }
+  }
+`;
+
+export const ADMIN_UPDATE_PRODUCT = gql`
+  mutation AdminUpdateProduct($id: String!, $input: UpdateProductInput!) {
+    adminUpdateProduct(id: $id, input: $input) {
+      id title description price discount condition city status
+      category { id label }
+    }
+  }
+`;
+
+export const ADMIN_DELETE_PRODUCT_IMAGE = gql`
+  mutation AdminDeleteProductImage($imageId: String!) {
+    adminDeleteProductImage(imageId: $imageId) {
+      id
+      images { id url sortOrder }
+    }
+  }
+`;
+
+export const SUSPEND_USER = gql`
+  mutation SuspendUser($id: String!, $reason: String) {
+    suspendUser(id: $id, reason: $reason) { id suspended suspendedReason permission }
+  }
+`;
+
+export const UNSUSPEND_USER = gql`
+  mutation UnsuspendUser($id: String!) {
+    unsuspendUser(id: $id) { id suspended suspendedReason permission }
+  }
+`;
+
+export const DELETE_PAYMENT = gql`
+  mutation DeletePayment($id: String!) {
+    deletePayment(id: $id) { id }
+  }
+`;
+
 // ─── Favorites ────────────────────────────────────────────────────────────────
 
 export const TOGGLE_FAVORITE = gql`
@@ -322,6 +382,24 @@ export const DISMISS_HOME_SUGGESTION = gql`
 export const RUN_STATS_ANALYZER = gql`
   mutation RunStatsAnalyzer {
     runStatsAnalyzer
+  }
+`;
+
+// ─── Plans ──────────────────────────────────────────────────────────────────
+
+export const CHANGE_PLAN = gql`
+  mutation ChangePlan($input: ChangePlanInput!) {
+    changePlan(input: $input) {
+      id name plan planExpiresAt
+    }
+  }
+`;
+
+export const GET_PLAN_HISTORY = gql`
+  query PlanHistory($userId: String!) {
+    planHistory(userId: $userId) {
+      id oldPlan newPlan expiresAt reason changedById createdAt
+    }
   }
 `;
 

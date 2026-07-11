@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, type ReactNode } from "react";
+import { useState, useMemo, useEffect, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation } from "@apollo/client/react";
 import { GET_USERS, GET_ROLES } from "@/graphql/queries";
@@ -8,6 +8,8 @@ import {
   CREATE_USER,
   ADMIN_UPDATE_USER,
   DELETE_USER,
+  SUSPEND_USER,
+  UNSUSPEND_USER,
 } from "@/graphql/mutations";
 import DataTable from "@/components/admin/DataTable";
 import Badge from "@/components/admin/Badge";
@@ -26,6 +28,8 @@ import {
   User,
   Mail,
   ExternalLink,
+  Ban,
+  RotateCcw,
 } from "lucide-react";
 import Spinner from "@/components/Spinner";
 import { getErrorMessage } from "@/lib/errors";
@@ -39,6 +43,8 @@ interface User {
   location?: string | null;
   rolId?: string | null;
   permission?: string;
+  suspended?: boolean;
+  suspendedReason?: string | null;
   createdAt?: string;
 }
 
@@ -56,8 +62,28 @@ const EMPTY_FORM = {
   permission: "DENIED",
 };
 
+const PAGE_SIZE = 50;
+
 export default function AdminUsers() {
-  const { data, loading, refetch } = useQuery(GET_USERS) as {
+  const [search, setSearch] = useState("");
+  const [debounced, setDebounced] = useState("");
+  const [page, setPage] = useState(0);
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setDebounced(search.trim());
+      setPage(0);
+    }, 400);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  const { data, loading, refetch } = useQuery(GET_USERS, {
+    variables: {
+      take: PAGE_SIZE,
+      skip: page * PAGE_SIZE,
+      query: debounced || undefined,
+    },
+  }) as {
     data: any;
     loading: boolean;
     refetch: () => void;
@@ -66,6 +92,8 @@ export default function AdminUsers() {
   const [createUser, { loading: creating }] = useMutation(CREATE_USER);
   const [adminUpdateUser, { loading: updating }] = useMutation(ADMIN_UPDATE_USER);
   const [deleteUser, { loading: deleting }] = useMutation(DELETE_USER);
+  const [suspendUser, { loading: suspending }] = useMutation(SUSPEND_USER);
+  const [unsuspendUser, { loading: unsuspending }] = useMutation(UNSUSPEND_USER);
   const router = useRouter();
   const { can } = useAbilities();
   const canCreate = can("create");
@@ -175,6 +203,24 @@ export default function AdminUsers() {
     }
   };
 
+  const toggleSuspension = async (u: User) => {
+    try {
+      if (u.suspended) {
+        await unsuspendUser({ variables: { id: u.id } });
+      } else {
+        const reason =
+          window.prompt(
+            `Motivo de la suspensión de "${u.name}" (opcional):`,
+          ) ?? undefined;
+        await suspendUser({ variables: { id: u.id, reason } });
+      }
+      setSelected(null);
+      refetch();
+    } catch {
+      /* ignore */
+    }
+  };
+
   const togglePermission = async (u: User) => {
     const next = u.permission === "GRANTED" ? "DENIED" : "GRANTED";
     try {
@@ -204,13 +250,19 @@ export default function AdminUsers() {
         )}
       </div>
 
+      <div className="mb-4">
+        <input
+          placeholder="Buscar por nombre o email…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="h-10 w-full max-w-md rounded-xl border border-outline-variant/50 bg-surface-lowest px-4 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+        />
+      </div>
+
       <DataTable<User>
         loading={loading}
         data={users}
-        searchable
-        searchKeys={["name", "email"]}
-        searchPlaceholder="Buscar por nombre o email…"
-        pageSize={10}
+        pageSize={PAGE_SIZE}
         onRowClick={(u) => setSelected(u)}
         columns={[
           {
@@ -238,7 +290,9 @@ export default function AdminUsers() {
             label: "Estado",
             sortable: false,
             render: (u) =>
-              canUpdate ? (
+              u.suspended ? (
+                <Badge variant="draft">Suspendido</Badge>
+              ) : canUpdate ? (
                 <button
                   type="button"
                   title="Clic para cambiar"
@@ -323,6 +377,25 @@ export default function AdminUsers() {
         }
       />
 
+      {/* Server pagination */}
+      <div className="mt-4 flex items-center justify-end gap-2">
+        <button
+          onClick={() => setPage((p) => Math.max(0, p - 1))}
+          disabled={page === 0 || loading}
+          className="h-9 rounded-xl border border-outline-variant/50 bg-surface-lowest px-3 text-sm font-medium transition hover:bg-surface-container disabled:opacity-40"
+        >
+          Anterior
+        </button>
+        <span className="text-sm text-muted">Página {page + 1}</span>
+        <button
+          onClick={() => setPage((p) => p + 1)}
+          disabled={users.length < PAGE_SIZE || loading}
+          className="h-9 rounded-xl border border-outline-variant/50 bg-surface-lowest px-3 text-sm font-medium transition hover:bg-surface-container disabled:opacity-40"
+        >
+          Siguiente
+        </button>
+      </div>
+
       {/* Detalle de usuario */}
       <Modal open={!!selected} onClose={() => setSelected(null)} title="Detalle de usuario" wide>
         {selected && (
@@ -357,7 +430,13 @@ export default function AdminUsers() {
                   <Badge variant={selected.verified ? "verified" : "unverified"}>
                     {selected.verified ? "Verificado" : "Sin verificar"}
                   </Badge>
+                  {selected.suspended && <Badge variant="draft">Suspendido</Badge>}
                 </div>
+                {selected.suspended && selected.suspendedReason && (
+                  <p className="mt-2 text-xs text-danger">
+                    Motivo: {selected.suspendedReason}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -383,6 +462,24 @@ export default function AdminUsers() {
               </button>
               {(canUpdate || canDelete) && (
                 <div className="flex gap-2">
+                  {canUpdate && (
+                    <button
+                      onClick={() => toggleSuspension(selected)}
+                      disabled={suspending || unsuspending}
+                      className={`inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-medium transition disabled:opacity-60 ${
+                        selected.suspended
+                          ? "bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20"
+                          : "bg-danger-soft text-danger hover:opacity-90"
+                      }`}
+                    >
+                      {selected.suspended ? <RotateCcw size={15} /> : <Ban size={15} />}
+                      {suspending || unsuspending
+                        ? "Guardando…"
+                        : selected.suspended
+                          ? "Reactivar"
+                          : "Suspender"}
+                    </button>
+                  )}
                   {canUpdate && (
                     <button
                       onClick={() => {

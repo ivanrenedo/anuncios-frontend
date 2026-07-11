@@ -33,6 +33,8 @@ export interface Product {
   status?: string;
   views?: number;
   favoritesCount?: number;
+  bumpedAt?: string;
+  boostedUntil?: string | null;
   createdAt?: string;
   seller?: Seller;
   category?: Category;

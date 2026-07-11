@@ -36,6 +36,8 @@ const EMPTY_FORM = {
   avatar: "",
   sectionId: "",
   filterCat: "",
+  plan: "",
+  city: "",
 };
 
 export default function AdminNotificationsPage() {
@@ -95,6 +97,8 @@ export default function AdminNotificationsPage() {
       if (form.avatar.trim()) input.avatar = form.avatar.trim();
       if (form.sectionId) input.sectionId = form.sectionId;
       if (form.filterCat) input.filterCat = form.filterCat;
+      if (form.plan) input.plan = form.plan;
+      if (form.city.trim()) input.city = form.city.trim();
 
       const mutation = form.type === "marketing" ? sendMarketing : sendSystem;
       const res = await mutation({ variables: { input } });
@@ -182,6 +186,34 @@ export default function AdminNotificationsPage() {
             className="w-full resize-none rounded-xl border border-outline-variant/50 bg-surface-lowest px-3 py-2.5 text-sm outline-none focus:border-primary"
           />
           <p className="mt-1 text-right text-xs text-muted">{form.body.length}/1000</p>
+        </div>
+
+        {/* Segmentación de audiencia */}
+        <div>
+          <label className="mb-1 block text-xs font-semibold text-muted">
+            Audiencia (opcional)
+          </label>
+          <div className="grid grid-cols-2 gap-2">
+            <select
+              value={form.plan}
+              onChange={(e) => setForm({ ...form, plan: e.target.value })}
+              className="h-10 w-full rounded-xl border border-outline-variant/50 bg-surface-lowest px-3 text-sm outline-none focus:border-primary"
+            >
+              <option value="">Todos los planes</option>
+              <option value="FREE">Solo Gratis</option>
+              <option value="STAR">Solo Estrella</option>
+              <option value="PREMIUM">Solo Premium</option>
+            </select>
+            <input
+              value={form.city}
+              onChange={(e) => setForm({ ...form, city: e.target.value })}
+              placeholder="Ciudad (ej: Malabo)"
+              className="h-10 w-full rounded-xl border border-outline-variant/50 bg-surface-lowest px-3 text-sm outline-none focus:border-primary"
+            />
+          </div>
+          <p className="mt-1 text-xs text-muted">
+            Deja vacío para enviar a todos. Los filtros se combinan (plan Y ciudad).
+          </p>
         </div>
 
         {/* Image upload */}

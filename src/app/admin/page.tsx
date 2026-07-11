@@ -32,6 +32,7 @@ import {
   GET_REPORTS,
   REVIEW_STATS,
   TOP_RATED_SELLERS,
+  GET_SAVED_SEARCH_STATS,
 } from "@/graphql/queries";
 import StatCard from "@/components/admin/StatCard";
 import Badge from "@/components/admin/Badge";
@@ -248,6 +249,11 @@ export default function AdminDashboard() {
   }) as { data: any; loading: boolean };
   const { data: userData } = useQuery(GET_USERS) as { data: any };
   const { data: reportData } = useQuery(GET_REPORTS) as { data: any };
+  const { data: searchStatsData } = useQuery(GET_SAVED_SEARCH_STATS, {
+    variables: { limit: 10 },
+  }) as { data: any };
+  const searchTerms: { term: string; count: number }[] =
+    searchStatsData?.savedSearchStats ?? [];
   const { data: reviewStatsData, loading: reviewStatsLoading } = useQuery(REVIEW_STATS) as {
     data: any;
     loading: boolean;
@@ -473,6 +479,29 @@ export default function AdminDashboard() {
 
         <SellerRatingsChart />
       </div>
+
+      {/* Demand signal: most-saved search terms */}
+      {searchTerms.length > 0 && (
+        <div className="mt-5 rounded-2xl border border-outline-variant/30 bg-surface-lowest p-5">
+          <h2 className="mb-1 text-base font-bold text-on-surface">Qué busca la gente</h2>
+          <p className="mb-3 text-xs text-muted">
+            Términos con alertas guardadas — demanda que quizá falta en el catálogo
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {searchTerms.map((t) => (
+              <span
+                key={t.term}
+                className="inline-flex items-center gap-1.5 rounded-full border border-outline-variant/40 bg-surface-low px-3 py-1.5 text-sm text-on-surface"
+              >
+                {t.term}
+                <span className="rounded-full bg-primary/10 px-1.5 text-xs font-bold text-primary">
+                  {t.count}
+                </span>
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Requires attention */}
       {pendingList.length > 0 && (

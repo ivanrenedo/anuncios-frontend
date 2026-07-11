@@ -3,9 +3,14 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useQuery, useMutation } from "@apollo/client/react";
-import { Flag, Package, User as UserIcon, ExternalLink, Trash2 } from "lucide-react";
+import { Flag, Package, User as UserIcon, ExternalLink, Trash2, EyeOff, Ban } from "lucide-react";
 import { GET_REPORTS } from "@/graphql/queries";
-import { UPDATE_REPORT_STATUS, DELETE_REPORTS } from "@/graphql/mutations";
+import {
+  UPDATE_REPORT_STATUS,
+  DELETE_REPORTS,
+  ADMIN_SET_PRODUCT_STATUS,
+  SUSPEND_USER,
+} from "@/graphql/mutations";
 import DataTable from "@/components/admin/DataTable";
 import Badge from "@/components/admin/Badge";
 import Modal from "@/components/admin/Modal";
@@ -95,6 +100,8 @@ export default function AdminReports() {
   };
   const [updateStatus, { loading: updating }] = useMutation(UPDATE_REPORT_STATUS);
   const [deleteReportsMut, { loading: deleting }] = useMutation(DELETE_REPORTS);
+  const [hideProduct, { loading: hiding }] = useMutation(ADMIN_SET_PRODUCT_STATUS);
+  const [suspendUserMut, { loading: suspending }] = useMutation(SUSPEND_USER);
 
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
@@ -241,6 +248,36 @@ export default function AdminReports() {
   const deleteOneReport = (id: string) => {
     if (!confirm("¿Eliminar este reporte? Esta acción no se puede deshacer.")) return;
     runDelete([id]);
+  };
+
+  // Moderation shortcuts: act on the reported target without leaving the modal.
+  const moderateHideProduct = async () => {
+    const product = selected?.reports[0]?.product;
+    if (!product) return;
+    const reason =
+      window.prompt("Motivo (se envía al vendedor, opcional):") ?? undefined;
+    setActionError("");
+    try {
+      await hideProduct({
+        variables: { id: product.id, status: "hide", reason },
+      });
+    } catch (e) {
+      setActionError(getErrorMessage(e, "No se pudo ocultar el anuncio."));
+    }
+  };
+
+  const moderateSuspendUser = async () => {
+    const target = selected?.reports[0]?.reportedUser;
+    if (!target) return;
+    if (!confirm(`¿Suspender a "${target.name}"? Se ocultarán sus anuncios y perderá el acceso.`)) return;
+    const reason =
+      window.prompt("Motivo de la suspensión (opcional):") ?? undefined;
+    setActionError("");
+    try {
+      await suspendUserMut({ variables: { id: target.id, reason } });
+    } catch (e) {
+      setActionError(getErrorMessage(e, "No se pudo suspender al usuario."));
+    }
   };
 
   return (
@@ -490,6 +527,30 @@ export default function AdminReports() {
                     </Link>
                   )}
                 </div>
+              )}
+            </div>
+
+            {/* Acciones de moderación directas */}
+            <div className="flex flex-wrap gap-2">
+              {selected.type === "product" && selected.reports[0].product && (
+                <button
+                  onClick={moderateHideProduct}
+                  disabled={hiding}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-danger/10 px-3 py-2 text-sm font-semibold text-danger transition hover:bg-danger/20 disabled:opacity-50"
+                >
+                  <EyeOff size={14} />
+                  {hiding ? "Ocultando…" : "Ocultar anuncio"}
+                </button>
+              )}
+              {selected.type === "user" && selected.reports[0].reportedUser && (
+                <button
+                  onClick={moderateSuspendUser}
+                  disabled={suspending}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-danger/10 px-3 py-2 text-sm font-semibold text-danger transition hover:bg-danger/20 disabled:opacity-50"
+                >
+                  <Ban size={14} />
+                  {suspending ? "Suspendiendo…" : "Suspender usuario"}
+                </button>
               )}
             </div>
 
