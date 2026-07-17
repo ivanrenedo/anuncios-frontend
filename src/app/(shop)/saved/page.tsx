@@ -73,7 +73,7 @@ function EmptyState({
       <p className="mx-auto mt-1 max-w-sm text-sm text-muted">{body}</p>
       <Link
         href={cta.href}
-        className="mt-5 inline-block rounded-full bg-primary px-6 py-2.5 text-sm font-bold text-on-primary"
+        className="mt-5 inline-block rounded-lg bg-primary px-6 py-2.5 text-sm font-bold text-on-primary transition hover:bg-primary/90"
       >
         {cta.label}
       </Link>

@@ -13,14 +13,18 @@ import {
   UserPlus,
   UserCheck,
   Star,
+  Crown,
   ArrowLeft,
+  Users,
+  Package,
 } from "lucide-react";
 import {
   GET_USER,
   PRODUCTS_BY_SELLER,
   SELLER_RATING,
   REVIEWS_BY_SELLER,
-  GET_FOLLOWERS,
+  FOLLOWERS_COUNT,
+  FOLLOWING_COUNT,
   IS_FOLLOWING,
 } from "@/graphql/queries";
 import { FOLLOW_USER, UNFOLLOW_USER } from "@/graphql/mutations";
@@ -32,12 +36,16 @@ import ReportModal from "@/components/ReportModal";
 import Skeleton from "@/components/Skeleton";
 import type { Product } from "@/lib/types";
 
+type Tab = "active" | "sold";
+
 export default function PublicUserProfile() {
   const params = useParams();
   const id = (params?.id as string) ?? "";
   const router = useRouter();
   const { user: me, isAuthenticated } = useAuth();
   const isOwn = !!me?.id && me.id === id;
+
+  const [activeTab, setActiveTab] = useState<Tab>("active");
 
   const { data, loading } = useQuery(GET_USER, {
     variables: { id },
@@ -57,19 +65,21 @@ export default function PublicUserProfile() {
     variables: { sellerId: id },
     skip: !id,
   }) as { data: any };
-  const { data: followersData, refetch: refetchFollowers } = useQuery(GET_FOLLOWERS, {
+  const { data: followersData } = useQuery(FOLLOWERS_COUNT, {
     variables: { userId: id },
     skip: !id,
-  }) as { data: any; refetch: () => void };
+  }) as { data: any };
+  const { data: followingData } = useQuery(FOLLOWING_COUNT, {
+    variables: { userId: id },
+    skip: !id,
+  }) as { data: any };
   const { data: isFollowingData } = useQuery(IS_FOLLOWING, {
     variables: { userId: id },
     skip: !id || !isAuthenticated || isOwn,
   }) as { data: any };
 
-  // Followers is refetched manually below; also refresh the following list and
-  // the follow state so they stay in sync app-wide.
   const followOpts = {
-    refetchQueries: ["Following", "IsFollowing"],
+    refetchQueries: ["Following", "IsFollowing", "FollowersCount"],
     awaitRefetchQueries: true,
   };
   const [followUser] = useMutation(FOLLOW_USER, followOpts);
@@ -84,7 +94,19 @@ export default function PublicUserProfile() {
   const products: Product[] = prodData?.productsBySeller ?? [];
   const rating = ratingData?.sellerRating;
   const reviews: any[] = reviewsData?.reviewsBySeller ?? [];
-  const followersCount = (followersData?.followers ?? []).length;
+  const followersCount = followersData?.followersCount ?? 0;
+  const followingCount = followingData?.followingCount ?? 0;
+
+  const activeProducts = products.filter((p) => p.status === "active");
+  const soldProducts = products.filter((p) => p.status === "sold");
+  const tabProducts = activeTab === "active" ? activeProducts : soldProducts;
+
+  const planLabel =
+    user?.plan === "PREMIUM"
+      ? "Premium"
+      : user?.plan === "STAR"
+        ? "Star"
+        : null;
 
   const onToggleFollow = async () => {
     if (!isAuthenticated) {
@@ -96,9 +118,8 @@ export default function PublicUserProfile() {
     try {
       if (next) await followUser({ variables: { userId: id } });
       else await unfollowUser({ variables: { userId: id } });
-      refetchFollowers();
     } catch {
-      setFollowing(!next); // revert on failure
+      setFollowing(!next);
     }
   };
 
@@ -112,12 +133,17 @@ export default function PublicUserProfile() {
 
   if (loading && !user) {
     return (
-      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
-        <Skeleton className="h-44 rounded-3xl" />
-        <div className="mt-4 grid grid-cols-3 gap-3">
-          <Skeleton className="h-20 rounded-2xl" />
-          <Skeleton className="h-20 rounded-2xl" />
-          <Skeleton className="h-20 rounded-2xl" />
+      <div className="mx-auto max-w-7xl px-4 py-0 sm:px-6">
+        <Skeleton className="h-32 w-full rounded-b-3xl sm:h-48" />
+        <div className="px-4">
+          <Skeleton className="-mt-12 h-24 w-24 rounded-full border-4" />
+          <Skeleton className="mt-3 h-6 w-48" />
+          <Skeleton className="mt-2 h-4 w-64" />
+        </div>
+        <div className="mt-6 grid grid-cols-4 gap-3 px-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-20 rounded-xl" />
+          ))}
         </div>
       </div>
     );
@@ -135,38 +161,75 @@ export default function PublicUserProfile() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl py-6">
-      <div className="px-4 sm:px-6">
+    <div className="mx-auto max-w-7xl pb-8">
+      {/* Back button */}
+      <div className="px-4 pt-4 sm:px-6">
         <button
           onClick={() => router.back()}
-          className="mb-4 inline-flex items-center gap-1 text-sm font-medium text-muted hover:text-on-surface"
+          className="inline-flex items-center gap-1 text-sm font-medium text-muted hover:text-on-surface"
         >
           <ArrowLeft size={16} /> Volver
         </button>
+      </div>
 
-        {/* Header card */}
-        <div className="flex flex-col items-start gap-4 rounded-3xl border border-outline-variant/30 bg-surface-lowest p-6 shadow-soft sm:flex-row sm:items-center">
+      {/* Cover photo */}
+      <div className="relative mt-3">
+        {user.coverUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={resolveImage(user.coverUrl)}
+            alt=""
+            className="h-32 w-full rounded-3xl object-cover sm:h-48 sm:mx-4 sm:w-[calc(100%-2rem)] md:mx-6 md:w-[calc(100%-3rem)]"
+          />
+        ) : (
+          <div className="mx-4 h-32 rounded-3xl bg-gradient-to-br from-primary via-primary/80 to-secondary sm:mx-6 sm:h-48" />
+        )}
+
+        {/* Avatar overlapping cover */}
+        <div className="absolute -bottom-12 left-8 sm:left-10">
           {user.avatarUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={resolveImage(user.avatarUrl)}
               alt=""
-              className="h-20 w-20 rounded-full object-cover"
+              className="h-24 w-24 rounded-full border-4 border-surface object-cover shadow-card"
             />
           ) : (
-            <div className="grid h-20 w-20 place-items-center rounded-full bg-primary/15 text-2xl font-extrabold text-primary">
+            <div className="grid h-24 w-24 place-items-center rounded-full border-4 border-surface bg-primary/15 text-3xl font-extrabold text-primary shadow-card">
               {user.name?.charAt(0) ?? "?"}
             </div>
           )}
+        </div>
+      </div>
 
+      {/* User info block */}
+      <div className="mt-14 px-4 sm:px-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex-1">
-            <h1 className="flex items-center gap-1.5 text-xl font-extrabold">
-              {user.name}
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-2xl font-extrabold text-on-surface">{user.name}</h1>
               {user.verified && (
-                <BadgeCheck size={18} className="fill-primary text-white" strokeWidth={0} />
+                <BadgeCheck size={20} className="fill-primary text-white" strokeWidth={0} />
               )}
-            </h1>
-            <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted">
+              {planLabel && (
+                <span
+                  className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-bold ${
+                    planLabel === "Premium"
+                      ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+                      : "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400"
+                  }`}
+                >
+                  {planLabel === "Premium" ? <Crown size={12} /> : <Star size={12} />}
+                  {planLabel}
+                </span>
+              )}
+            </div>
+
+            {user.bio && (
+              <p className="mt-2 max-w-2xl text-sm text-on-surface-variant">{user.bio}</p>
+            )}
+
+            <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm text-muted">
               {user.location && (
                 <span className="inline-flex items-center gap-1">
                   <MapPin size={14} /> {user.location}
@@ -184,20 +247,17 @@ export default function PublicUserProfile() {
               )}
               <span>Miembro desde {formatDate(user.createdAt)}</span>
             </div>
-            {user.bio && (
-              <p className="mt-3 max-w-2xl text-sm text-on-surface-variant">{user.bio}</p>
-            )}
           </div>
 
-          {/* Actions — hidden on your own profile */}
+          {/* Actions */}
           {!isOwn && (
             <div className="flex gap-2">
               <button
                 onClick={onToggleFollow}
-                className={`flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-bold transition ${
+                className={`flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-bold transition ${
                   following
                     ? "bg-surface-container text-on-surface hover:bg-surface-high"
-                    : "bg-primary text-on-primary hover:opacity-90"
+                    : "bg-primary text-on-primary hover:bg-primary/90"
                 }`}
               >
                 {following ? <UserCheck size={16} /> : <UserPlus size={16} />}
@@ -205,31 +265,67 @@ export default function PublicUserProfile() {
               </button>
               <button
                 onClick={onReport}
-                className="flex items-center gap-1.5 rounded-full bg-danger-soft px-4 py-2 text-sm font-bold text-danger transition hover:opacity-80"
+                className="flex items-center gap-1.5 rounded-lg bg-danger-soft px-4 py-2 text-sm font-bold text-danger transition hover:opacity-80"
               >
                 <Flag size={16} /> Reportar
               </button>
             </div>
           )}
         </div>
+      </div>
 
-        {/* Stats */}
-        <div className="mt-4 grid grid-cols-3 gap-3">
-          <Stat label="Anuncios" value={products.length} />
-          <Stat label="Valoración" value={rating?.average ? rating.average.toFixed(1) : "—"} />
-          <Stat label="Seguidores" value={followersCount} />
+      {/* Stats row */}
+      <div className="mt-6 grid grid-cols-2 gap-3 px-4 sm:grid-cols-4 sm:px-6">
+        <StatCard icon={<Package size={20} />} label="Anuncios" value={products.length} />
+        <StatCard
+          icon={<Star size={20} />}
+          label="Valoración"
+          value={rating?.average ? rating.average.toFixed(1) : "--"}
+        />
+        <StatCard icon={<Users size={20} />} label="Seguidores" value={followersCount} />
+        <StatCard icon={<UserPlus size={20} />} label="Siguiendo" value={followingCount} />
+      </div>
+
+      {/* Product tabs */}
+      <div className="mt-8 px-4 sm:px-6">
+        <div className="flex items-center gap-1 rounded-xl bg-surface-container p-1">
+          {([
+            { key: "active" as Tab, label: "Activos", count: activeProducts.length },
+            { key: "sold" as Tab, label: "Vendidos", count: soldProducts.length },
+          ]).map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              className={`flex-1 rounded-lg px-4 py-2.5 text-sm font-bold transition ${
+                activeTab === tab.key
+                  ? "bg-surface-lowest text-on-surface shadow-sm"
+                  : "text-muted hover:text-on-surface-variant"
+              }`}
+            >
+              {tab.label}{" "}
+              <span
+                className={`ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-bold ${
+                  activeTab === tab.key
+                    ? "bg-primary/15 text-primary"
+                    : "bg-surface-high text-muted"
+                }`}
+              >
+                {tab.count}
+              </span>
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* Listings */}
-      <div className="mt-8">
-        <h2 className="mb-3 px-4 text-lg font-extrabold sm:px-6">Anuncios</h2>
-        {!prodLoading && products.length === 0 ? (
+      <div className="mt-4">
+        {!prodLoading && tabProducts.length === 0 ? (
           <p className="px-6 py-12 text-center text-sm text-muted">
-            Este usuario no tiene anuncios publicados.
+            {activeTab === "active"
+              ? "Este usuario no tiene anuncios activos."
+              : "Este usuario no tiene productos vendidos."}
           </p>
         ) : (
-          <ProductGrid products={products} loading={prodLoading} />
+          <ProductGrid products={tabProducts} loading={prodLoading} />
         )}
       </div>
 
@@ -241,7 +337,7 @@ export default function PublicUserProfile() {
             {reviews.map((r) => (
               <div
                 key={r.id}
-                className="rounded-2xl border border-outline-variant/30 bg-surface-lowest p-4"
+                className="rounded-xl border border-outline-variant/30 bg-surface-lowest p-4"
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -296,9 +392,20 @@ export default function PublicUserProfile() {
   );
 }
 
-function Stat({ label, value }: { label: string; value: number | string }) {
+function StatCard({
+  icon,
+  label,
+  value,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: number | string;
+}) {
   return (
-    <div className="rounded-2xl border border-outline-variant/30 bg-surface-lowest p-4 text-center">
+    <div className="rounded-xl border border-outline-variant/30 bg-surface-lowest p-4 text-center">
+      <div className="mx-auto mb-2 grid h-10 w-10 place-items-center rounded-xl bg-primary/10 text-primary">
+        {icon}
+      </div>
       <p className="text-2xl font-extrabold text-on-surface">
         {typeof value === "number" ? value.toLocaleString("es") : value}
       </p>

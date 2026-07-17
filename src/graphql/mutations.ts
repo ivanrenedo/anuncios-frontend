@@ -7,7 +7,17 @@ export const GOOGLE_LOGIN = gql`
     googleLogin(input: $input) {
       accessToken
       refreshToken
-      user { id name email avatarUrl phone verified }
+      user { id name email avatarUrl permission phone verified }
+    }
+  }
+`;
+
+export const REFRESH_TOKEN = gql`
+  mutation RefreshToken($token: String!) {
+    refreshToken(token: $token) {
+      accessToken
+      refreshToken
+      user { id name email avatarUrl }
     }
   }
 `;
@@ -95,6 +105,12 @@ export const UPDATE_USER = gql`
   }
 `;
 
+export const DELETE_MY_ACCOUNT = gql`
+  mutation DeleteMyAccount {
+    deleteMyAccount { id }
+  }
+`;
+
 // ─── Roles ────────────────────────────────────────────────────────────────────
 
 export const CREATE_ROL = gql`
@@ -140,15 +156,15 @@ export const UPDATE_PRODUCT = gql`
   }
 `;
 
-export const DELETE_PRODUCT = gql`
-  mutation DeleteProduct($id: String!) {
-    deleteProduct(id: $id) { id }
-  }
-`;
-
 export const VIEW_PRODUCT = gql`
   mutation ViewProduct($id: String!, $viewerKey: String) {
     viewProduct(id: $id, viewerKey: $viewerKey) { id views }
+  }
+`;
+
+export const CONTACT_PRODUCT = gql`
+  mutation ContactProduct($id: String!) {
+    contactProduct(id: $id) { id contacts }
   }
 `;
 
@@ -220,34 +236,35 @@ export const TOGGLE_FAVORITE = gql`
   }
 `;
 
-// ─── Reviews ──────────────────────────────────────────────────────────────────
-
-export const CREATE_REVIEW = gql`
-  mutation CreateReview($input: CreateReviewInput!) {
-    createReview(input: $input) {
-      id rating text createdAt
-      author { id name avatarUrl }
-    }
-  }
-`;
-
-export const DELETE_REVIEW = gql`
-  mutation DeleteReview($id: String!) {
-    deleteReview(id: $id) { id }
-  }
-`;
-
 // ─── Followers ────────────────────────────────────────────────────────────────
 
 export const FOLLOW_USER = gql`
   mutation FollowUser($userId: String!) {
-    followUser(userId: $userId) { id }
+    followUser(userId: $userId) {
+      id
+      follower { id name }
+      followed { id name }
+    }
   }
 `;
 
 export const UNFOLLOW_USER = gql`
   mutation UnfollowUser($userId: String!) {
     unfollowUser(userId: $userId) { id }
+  }
+`;
+
+// ─── Saved Searches ──────────────────────────────────────────────────────────
+
+export const CREATE_SAVED_SEARCH = gql`
+  mutation CreateSavedSearch($input: CreateSavedSearchInput!) {
+    createSavedSearch(input: $input) { id }
+  }
+`;
+
+export const DELETE_SAVED_SEARCH = gql`
+  mutation DeleteSavedSearch($id: String!) {
+    deleteSavedSearch(id: $id) { id }
   }
 `;
 
@@ -274,6 +291,12 @@ export const DELETE_REPORTS = gql`
   }
 `;
 
+export const DELETE_ADMIN_ACTIONS = gql`
+  mutation DeleteAdminActions($ids: [String!]!) {
+    deleteAdminActions(ids: $ids)
+  }
+`;
+
 // ─── Notifications ────────────────────────────────────────────────────────────
 
 export const MARK_NOTIFICATION_READ = gql`
@@ -285,12 +308,6 @@ export const MARK_NOTIFICATION_READ = gql`
 export const MARK_ALL_NOTIFICATIONS_READ = gql`
   mutation MarkAllNotificationsRead {
     markAllNotificationsRead
-  }
-`;
-
-export const DELETE_NOTIFICATION = gql`
-  mutation DeleteNotification($id: String!) {
-    deleteNotification(id: $id) { id }
   }
 `;
 
@@ -385,6 +402,12 @@ export const RUN_STATS_ANALYZER = gql`
   }
 `;
 
+export const TRACK_HOME_SECTION_EVENT = gql`
+  mutation TrackHomeSectionEvent($sectionId: String!, $event: String!, $viewerKey: String!) {
+    trackHomeSectionEvent(sectionId: $sectionId, event: $event, viewerKey: $viewerKey)
+  }
+`;
+
 // ─── Plans ──────────────────────────────────────────────────────────────────
 
 export const CHANGE_PLAN = gql`
@@ -403,7 +426,23 @@ export const GET_PLAN_HISTORY = gql`
   }
 `;
 
+export const DELETE_PLAN_CHANGES = gql`
+  mutation DeletePlanChanges($ids: [String!]!) {
+    deletePlanChanges(ids: $ids)
+  }
+`;
+
 // ─── Verifications ───────────────────────────────────────────────────────────
+
+export const REQUEST_VERIFICATION = gql`
+  mutation RequestVerification {
+    requestVerification {
+      id
+      status
+      createdAt
+    }
+  }
+`;
 
 export const APPROVE_VERIFICATION = gql`
   mutation ApproveVerification($id: String!) {

@@ -181,8 +181,6 @@ export default function AdminCategories() {
     }
   };
 
-  const confirmBlocked = !!confirm && childrenOf(confirm.id).length > 0;
-
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
@@ -483,16 +481,9 @@ export default function AdminCategories() {
         }}
         title="Eliminar categoría"
       >
-        {confirmBlocked ? (
-          <p className="mb-4 text-sm text-muted">
-            “{confirm?.label}” tiene subcategorías. Elimina o reasigna sus
-            subcategorías antes de borrarla.
-          </p>
-        ) : (
-          <p className="mb-4 text-sm text-muted">
-            ¿Eliminar “{confirm?.label}”? Esta acción no se puede deshacer.
-          </p>
-        )}
+        <p className="mb-4 text-sm text-muted">
+          ¿Eliminar “{confirm?.label}”? Esta acción no se puede deshacer.
+        </p>
         {deleteError && <p className="mb-4 text-sm text-danger">{deleteError}</p>}
         <div className="flex justify-end gap-3">
           <button
@@ -504,7 +495,6 @@ export default function AdminCategories() {
           >
             Cancelar
           </button>
-          {!confirmBlocked && (
             <button
               onClick={doDelete}
               disabled={deleting}
@@ -513,7 +503,6 @@ export default function AdminCategories() {
               {deleting && <Spinner size={15} />}
               {deleting ? "Eliminando…" : "Eliminar"}
             </button>
-          )}
         </div>
       </Modal>
     </div>

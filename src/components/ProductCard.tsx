@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { Heart, MapPin, BadgeCheck } from "lucide-react";
+import { Heart, MapPin, BadgeCheck, Crown, Star, Zap } from "lucide-react";
 import type { Product } from "@/lib/types";
 import { resolveImage } from "@/lib/config";
-import { formatPrice, applyDiscount } from "@/lib/format";
+import { formatPrice, applyDiscount, timeAgo } from "@/lib/format";
 import { useFavoriteIds, useToggleFavorite } from "@/hooks/useFavorites";
 
 interface Props {
@@ -20,8 +20,15 @@ export default function ProductCard({ product }: Props) {
   const liked = override ?? favoriteIds.has(product.id);
   const img = resolveImage(product.images?.[0]?.url);
   const sold = product.status === "sold";
-  const accent = product.category?.color || undefined;
   const price = applyDiscount(product.price, product.discount);
+  const isBoosted =
+    !!product.boostedUntil && new Date(product.boostedUntil) > new Date();
+  const sellerPlan = product.seller?.plan;
+  const operationTag =
+    product.propertyDetail?.operation ||
+    product.serviceDetail?.offerType ||
+    product.vehicleDetail?.operation ||
+    null;
 
   const onLike = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -34,10 +41,10 @@ export default function ProductCard({ product }: Props) {
   return (
     <Link
       href={`/product/${product.id}`}
-      className="group block animate-fade-in"
+      className="group block animate-fade-in overflow-hidden rounded-xl border border-outline-variant/30 bg-surface-lowest transition hover:border-outline-variant/60 hover:shadow-card"
     >
       {/* Image */}
-      <div className="relative mb-2 aspect-square overflow-hidden rounded-2xl border border-outline-variant/30 bg-surface-low">
+      <div className="relative aspect-square overflow-hidden bg-surface-low">
         {img ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -71,6 +78,19 @@ export default function ProductCard({ product }: Props) {
           </span>
         )}
 
+        {isBoosted && !sold && !price.hasDiscount && (
+          <span className="absolute left-2 top-2 flex items-center gap-1 rounded-full bg-purple-600 px-2 py-0.5 text-[10px] font-bold text-white shadow">
+            <Zap size={10} className="fill-white" />
+            Destacado
+          </span>
+        )}
+
+        {operationTag && !sold && (
+          <span className="absolute bottom-2 right-2 rounded-md bg-black/55 px-2 py-1 text-[10px] font-semibold tracking-wide text-white">
+            {operationTag}
+          </span>
+        )}
+
         {canFavorite && (
           <button
             onClick={onLike}
@@ -86,53 +106,74 @@ export default function ProductCard({ product }: Props) {
         )}
       </div>
 
-      {/* Title + price */}
-      <h3 className="line-clamp-2 text-[15px] leading-5 text-on-surface">
-        {product.title}
-      </h3>
-      <div className="mt-0.5 flex items-baseline gap-1.5">
-        <span
-          className="text-[15px] font-semibold leading-5"
-          style={{ color: accent ?? "var(--color-primary)" }}
-        >
-          {formatPrice(price.final)}
-        </span>
-        {price.hasDiscount && (
-          <span className="text-[11px] text-muted line-through">
-            {formatPrice(price.original)}
+      {/* Body */}
+      <div className="p-3">
+        {/* Price first — the strongest signal */}
+        <div className="flex items-baseline gap-1.5">
+          <span className="text-base font-extrabold leading-5 text-on-surface">
+            {formatPrice(price.final)}
           </span>
+          {price.hasDiscount && (
+            <span className="text-[11px] text-muted line-through">
+              {formatPrice(price.original)}
+            </span>
+          )}
+        </div>
+
+        <h3 className="mt-1 line-clamp-2 text-[13px] leading-[18px] text-on-surface-variant">
+          {product.title}
+        </h3>
+
+        {(product.city || product.createdAt) && (
+          <div className="mt-1.5 flex items-center gap-1 text-[11px] text-muted">
+            {product.city && (
+              <>
+                <MapPin size={11} strokeWidth={1.5} className="shrink-0" />
+                <span className="truncate">{product.city}</span>
+              </>
+            )}
+            {product.city && product.createdAt && (
+              <span className="px-0.5">·</span>
+            )}
+            {product.createdAt && (
+              <span className="shrink-0">{timeAgo(product.createdAt)}</span>
+            )}
+          </div>
+        )}
+
+        {product.seller?.name && (
+          <div className="mt-2.5 flex items-center gap-2 border-t border-outline-variant/25 pt-2">
+            {product.seller.avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={resolveImage(product.seller.avatarUrl)}
+                alt=""
+                className="h-5 w-5 rounded-full object-cover"
+              />
+            ) : (
+              <div className="grid h-5 w-5 place-items-center rounded-full bg-primary/15 text-[9px] font-bold text-primary">
+                {product.seller.name.charAt(0)}
+              </div>
+            )}
+            <span className="flex-1 truncate text-[11px] font-semibold text-on-surface-variant">
+              {product.seller.name}
+            </span>
+            {sellerPlan === "PREMIUM" && (
+              <span className="grid h-4 w-4 place-items-center rounded-full bg-purple-600">
+                <Crown size={10} className="text-white" strokeWidth={2} />
+              </span>
+            )}
+            {sellerPlan === "STAR" && (
+              <span className="grid h-4 w-4 place-items-center rounded-full bg-amber-500">
+                <Star size={10} className="fill-white text-white" strokeWidth={0} />
+              </span>
+            )}
+            {product.seller.verified && (
+              <BadgeCheck size={13} className="fill-primary text-white" strokeWidth={0} />
+            )}
+          </div>
         )}
       </div>
-
-      {product.city && (
-        <div className="mt-1 flex items-center gap-1 text-[11px] text-muted">
-          <MapPin size={11} strokeWidth={1.5} />
-          <span className="truncate">{product.city}</span>
-        </div>
-      )}
-
-      {product.seller?.name && (
-        <div className="mt-3 flex items-center gap-2 border-t border-outline-variant/25 pt-2">
-          {product.seller.avatarUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={resolveImage(product.seller.avatarUrl)}
-              alt=""
-              className="h-5 w-5 rounded-full object-cover"
-            />
-          ) : (
-            <div className="grid h-5 w-5 place-items-center rounded-full bg-primary/15 text-[9px] font-bold text-primary">
-              {product.seller.name.charAt(0)}
-            </div>
-          )}
-          <span className="flex-1 truncate text-[11px] font-semibold text-on-surface-variant">
-            {product.seller.name}
-          </span>
-          {product.seller.verified && (
-            <BadgeCheck size={13} className="fill-primary text-white" strokeWidth={0} />
-          )}
-        </div>
-      )}
     </Link>
   );
 }
@@ -140,10 +181,13 @@ export default function ProductCard({ product }: Props) {
 /** Skeleton placeholder matching the card footprint. */
 export function ProductCardSkeleton() {
   return (
-    <div className="animate-pulse">
-      <div className="mb-2 aspect-square rounded-2xl bg-surface-container" />
-      <div className="h-4 w-3/4 rounded bg-surface-container" />
-      <div className="mt-2 h-4 w-1/2 rounded bg-surface-container" />
+    <div className="animate-pulse overflow-hidden rounded-xl border border-outline-variant/30 bg-surface-lowest">
+      <div className="aspect-square bg-surface-container" />
+      <div className="space-y-2 p-3">
+        <div className="h-5 w-20 rounded bg-surface-container" />
+        <div className="h-4 w-full rounded bg-surface-container" />
+        <div className="h-3 w-2/3 rounded bg-surface-container" />
+      </div>
     </div>
   );
 }

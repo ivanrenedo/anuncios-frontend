@@ -9,6 +9,7 @@ import DataTable from "@/components/admin/DataTable";
 import Badge from "@/components/admin/Badge";
 import Modal from "@/components/admin/Modal";
 import Spinner from "@/components/Spinner";
+import ExportButton from "@/components/admin/ExportButton";
 import { formatPrice, formatDate } from "@/lib/format";
 import { resolveImage } from "@/lib/config";
 import { useAbilities } from "@/hooks/useAbilities";
@@ -36,7 +37,7 @@ export default function AdminPayments() {
     variables: { take: 500 },
   }) as { data: any; loading: boolean; refetch: () => void };
   const [deletePayment, { loading: deleting }] = useMutation(DELETE_PAYMENT);
-  const { can } = useAbilities();
+  const { can, isSuperAdmin } = useAbilities();
   const canDelete = can("delete");
   const [confirm, setConfirm] = useState<Payment | null>(null);
 
@@ -84,11 +85,14 @@ export default function AdminPayments() {
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-extrabold text-on-surface">Pagos</h1>
-        <p className="mt-1 text-sm text-muted">
-          Registro de pagos manuales — se crea uno al activar un plan o un destacado
-        </p>
+      <div className="mb-6 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-extrabold text-on-surface">Pagos</h1>
+          <p className="mt-1 text-sm text-muted">
+            Registro de pagos manuales — se crea uno al activar un plan o un destacado
+          </p>
+        </div>
+        {isSuperAdmin && <ExportButton model="payments" />}
       </div>
 
       {/* Totals */}

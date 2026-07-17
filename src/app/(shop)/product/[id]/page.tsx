@@ -3,6 +3,7 @@
 import { use, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useQuery, useMutation } from "@apollo/client/react";
 import {
   ChevronLeft,
   ChevronRight,
@@ -17,17 +18,38 @@ import {
   Clock,
   Tag,
   Flag,
+  Crown,
+  Zap,
+  Car,
+  Gauge,
+  Calendar,
+  Settings2,
+  Fuel,
+  BedDouble,
+  Bath,
+  Building2,
+  Ruler,
+  ExternalLink,
+  Pencil,
 } from "lucide-react";
 import { useProduct } from "@/hooks/useProducts";
-import { useMutation, useQuery } from "@apollo/client/react";
-import { VIEW_PRODUCT } from "@/graphql/mutations";
-import { SELLER_RATING, REVIEWS_BY_SELLER } from "@/graphql/queries";
+import { VIEW_PRODUCT, CONTACT_PRODUCT } from "@/graphql/mutations";
+import {
+  SELLER_RATING,
+  REVIEWS_BY_SELLER,
+  PRODUCTS_BY_CATEGORY,
+} from "@/graphql/queries";
 import { useToggleFavorite, useFavoriteIds } from "@/hooks/useFavorites";
+import { useAuth } from "@/hooks/useAuth";
 import { resolveImage } from "@/lib/config";
 import { getViewerKey } from "@/lib/viewer";
 import { formatPrice, timeAgo, applyDiscount } from "@/lib/format";
 import Skeleton from "@/components/Skeleton";
 import ReportModal from "@/components/ReportModal";
+import ProductGrid from "@/components/ProductGrid";
+import type { Product } from "@/lib/types";
+
+/* ─── Inline helpers ─────────────────────────────────────────────────────── */
 
 function WhatsAppIcon({ size = 18 }: { size?: number }) {
   return (
@@ -46,6 +68,48 @@ function Chip({ icon, children }: { icon: React.ReactNode; children: React.React
   );
 }
 
+function SpecCard({
+  icon,
+  label,
+  value,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string | number;
+}) {
+  return (
+    <div className="flex items-center gap-3 rounded-xl border border-outline-variant/20 bg-surface-low p-3">
+      <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
+        {icon}
+      </div>
+      <div className="min-w-0">
+        <p className="text-[11px] text-muted">{label}</p>
+        <p className="truncate text-sm font-semibold text-on-surface">{value}</p>
+      </div>
+    </div>
+  );
+}
+
+function PlanBadge({ plan }: { plan: string }) {
+  if (plan === "PREMIUM") {
+    return (
+      <span className="ml-1.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-purple-100 text-purple-600">
+        <Crown size={12} />
+      </span>
+    );
+  }
+  if (plan === "STAR") {
+    return (
+      <span className="ml-1.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-amber-100 text-amber-600">
+        <Star size={12} />
+      </span>
+    );
+  }
+  return null;
+}
+
+/* ─── Main component ──────────────────────────────────────────────────── */
+
 export default function ProductDetailPage({
   params,
 }: {
@@ -56,12 +120,16 @@ export default function ProductDetailPage({
   const { product, loading } = useProduct(id);
   const { toggle, canFavorite } = useToggleFavorite();
   const favoriteIds = useFavoriteIds();
+  const { user } = useAuth();
   const [trackView] = useMutation(VIEW_PRODUCT);
+  const [trackContact] = useMutation(CONTACT_PRODUCT);
   const [likeOverride, setLikeOverride] = useState<boolean | null>(null);
   const liked = likeOverride ?? (product ? favoriteIds.has(product.id) : false);
   const [active, setActive] = useState(0);
   const [reportOpen, setReportOpen] = useState(false);
+  const contactedRef = useRef(false);
 
+  // Track view
   const tracked = useRef<string | null>(null);
   useEffect(() => {
     if (!id || tracked.current === id) return;
@@ -69,6 +137,7 @@ export default function ProductDetailPage({
     trackView({ variables: { id, viewerKey: getViewerKey() } }).catch(() => {});
   }, [id, trackView]);
 
+  // Seller rating & reviews
   const sellerId = product?.seller?.id;
   const { data: ratingData } = useQuery(SELLER_RATING, {
     variables: { sellerId: sellerId || "" },
@@ -89,16 +158,26 @@ export default function ProductDetailPage({
     author?: { name: string; avatarUrl?: string };
   }[] = reviewsData?.reviewsBySeller ?? [];
 
+  // Related products
+  const categoryId = product?.category?.id;
+  const { data: relatedData } = useQuery(PRODUCTS_BY_CATEGORY, {
+    variables: { categoryId: categoryId || "", take: 5 },
+    skip: !categoryId,
+  }) as { data: any };
+  const relatedProducts: Product[] = (relatedData?.productsByCategory ?? []).filter(
+    (p: Product) => p.id !== id
+  ).slice(0, 4);
+
   if (loading && !product) {
     return (
       <div className="mx-auto grid max-w-6xl gap-8 px-4 py-6 sm:px-6 lg:grid-cols-2">
-        <Skeleton className="aspect-square rounded-3xl" />
+        <Skeleton className="aspect-square rounded-2xl" />
         <div className="space-y-4">
           <Skeleton className="h-6 w-24 rounded-full" />
           <Skeleton className="h-9 w-3/4" />
           <Skeleton className="h-10 w-1/2" />
-          <Skeleton className="h-20 rounded-2xl" />
-          <Skeleton className="h-12 rounded-2xl" />
+          <Skeleton className="h-20 rounded-xl" />
+          <Skeleton className="h-12 rounded-xl" />
         </div>
       </div>
     );
@@ -135,6 +214,36 @@ export default function ProductDetailPage({
     }
   };
 
+  const isBoosted =
+    product.boostedUntil && new Date(product.boostedUntil) > new Date();
+  const isOwner = user?.id && sellerId && user.id === sellerId;
+  const sellerPhone = product.seller?.phone;
+  const canShowPhone = product.seller?.showPhone && sellerPhone;
+
+  const handleContact = (type: "whatsapp" | "call") => {
+    // Track contact once per session
+    if (!contactedRef.current) {
+      contactedRef.current = true;
+      trackContact({ variables: { id: product.id } }).catch(() => {});
+    }
+
+    if (type === "whatsapp") {
+      const msg = encodeURIComponent(
+        `Hola, vi tu anuncio "${product.title}" en Market EG`
+      );
+      window.open(`https://wa.me/${sellerPhone}?text=${msg}`, "_blank");
+    } else {
+      window.location.href = `tel:${sellerPhone}`;
+    }
+  };
+
+  // Category-specific detail shorthands
+  const veh = product.vehicleDetail;
+  const prop = product.propertyDetail;
+  const svc = product.serviceDetail;
+  const job = product.jobDetail;
+  const mkt = product.marketplaceDetail;
+
   return (
     <div className="mx-auto max-w-6xl px-4 py-5 sm:px-6">
       {/* Back */}
@@ -148,7 +257,7 @@ export default function ProductDetailPage({
       <div className="grid gap-8 lg:grid-cols-2">
         {/* ── Gallery ── */}
         <div className="lg:sticky lg:top-24 lg:self-start">
-          <div className="group relative aspect-square overflow-hidden rounded-3xl border border-outline-variant/30 bg-surface-container shadow-card">
+          <div className="group relative aspect-square overflow-hidden rounded-2xl border border-outline-variant/30 bg-surface-container">
             {images[active] ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -166,7 +275,7 @@ export default function ProductDetailPage({
             {/* Discount ribbon */}
             {price.hasDiscount && (
               <div className="absolute left-4 top-4 rounded-full bg-danger px-3 py-1 text-sm font-extrabold text-white shadow-lg">
-                −{price.percent}%
+                -{price.percent}%
               </div>
             )}
 
@@ -245,6 +354,14 @@ export default function ProductDetailPage({
 
         {/* ── Info ── */}
         <div className="animate-fade-in">
+          {/* Boosted indicator */}
+          {isBoosted && (
+            <div className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-700 border border-amber-200">
+              <Zap size={13} className="fill-amber-500 text-amber-500" />
+              Anuncio destacado
+            </div>
+          )}
+
           {product.category?.label && (
             <Link
               href={`/explore?cat=${product.category.slug}`}
@@ -258,7 +375,7 @@ export default function ProductDetailPage({
           </h1>
 
           {/* Price block */}
-          <div className="mt-4 rounded-2xl border border-outline-variant/30 bg-surface-lowest p-4 shadow-soft">
+          <div className="mt-4 rounded-xl border border-outline-variant/30 bg-surface-lowest p-4">
             <div className="flex flex-wrap items-end gap-3">
               <span className="text-4xl font-extrabold tracking-tight text-primary">
                 {formatPrice(price.final)}
@@ -269,7 +386,7 @@ export default function ProductDetailPage({
                     {formatPrice(price.original)}
                   </span>
                   <span className="mb-1.5 rounded-full bg-danger px-2.5 py-0.5 text-sm font-extrabold text-white">
-                    −{price.percent}%
+                    -{price.percent}%
                   </span>
                 </>
               )}
@@ -297,7 +414,7 @@ export default function ProductDetailPage({
 
           {/* Seller */}
           {product.seller && (
-            <div className="mt-5 flex items-center gap-3 rounded-2xl border border-outline-variant/40 bg-surface-lowest p-4 shadow-soft">
+            <div className="mt-5 flex items-center gap-3 rounded-xl border border-outline-variant/40 bg-surface-lowest p-4">
               <Link
                 href={`/user/${product.seller.id}`}
                 className="flex min-w-0 flex-1 items-center gap-3 transition hover:opacity-90"
@@ -319,6 +436,9 @@ export default function ProductDetailPage({
                     {product.seller.name}
                     {product.seller.verified && (
                       <BadgeCheck size={15} className="fill-primary text-white" strokeWidth={0} />
+                    )}
+                    {product.seller.plan && (
+                      <PlanBadge plan={product.seller.plan} />
                     )}
                   </p>
                   {rating && rating.count > 0 ? (
@@ -348,29 +468,162 @@ export default function ProductDetailPage({
                   )}
                 </div>
               </Link>
-              <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
-                En línea
-              </span>
             </div>
           )}
 
-          {/* Contact */}
-          <div className="mt-4 flex gap-3">
-            <button className="flex h-12 flex-1 items-center justify-center gap-2 rounded-2xl bg-secondary font-bold text-white shadow-soft transition hover:-translate-y-0.5 hover:shadow-card">
-              <Phone size={18} /> Llamar
-            </button>
-            <button className="flex h-12 flex-[2] items-center justify-center gap-2 rounded-2xl bg-[#25D366] font-bold text-white shadow-soft transition hover:-translate-y-0.5 hover:shadow-card">
-              <WhatsAppIcon /> WhatsApp
-            </button>
-          </div>
+          {/* Contact buttons */}
+          {canShowPhone ? (
+            <div className="mt-4 flex gap-3">
+              <button
+                onClick={() => handleContact("call")}
+                className="flex h-12 flex-1 items-center justify-center gap-2 rounded-lg bg-secondary font-bold text-white shadow-soft transition hover:bg-secondary/90"
+              >
+                <Phone size={18} /> Llamar
+              </button>
+              <button
+                onClick={() => handleContact("whatsapp")}
+                className="flex h-12 flex-[2] items-center justify-center gap-2 rounded-lg bg-[#25D366] font-bold text-white shadow-soft transition hover:opacity-90"
+              >
+                <WhatsAppIcon /> WhatsApp
+              </button>
+            </div>
+          ) : (
+            <div className="mt-4 rounded-xl border border-outline-variant/30 bg-surface-low p-3 text-center text-sm text-muted">
+              El vendedor no ha compartido su telefono
+            </div>
+          )}
+
+          {/* Edit button for owner */}
+          {isOwner && (
+            <Link
+              href={`/edit-listing/${product.id}`}
+              className="mt-3 flex h-11 items-center justify-center gap-2 rounded-lg border border-primary bg-primary/5 text-sm font-bold text-primary transition hover:bg-primary/10"
+            >
+              <Pencil size={16} /> Editar anuncio
+            </Link>
+          )}
 
           {/* Description */}
           {product.description && (
             <div className="mt-6">
-              <h3 className="mb-2 text-base font-bold">Descripción</h3>
+              <h3 className="mb-2 text-base font-bold">Descripcion</h3>
               <p className="whitespace-pre-line text-sm leading-6 text-on-surface-variant">
                 {product.description}
               </p>
+            </div>
+          )}
+
+          {/* ── Category-specific detail sections ── */}
+
+          {/* Vehicle detail */}
+          {veh && (
+            <div className="mt-6">
+              <h3 className="mb-3 text-base font-bold">Ficha tecnica</h3>
+              <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+                {veh.operation && (
+                  <SpecCard icon={<Car size={16} />} label="Operacion" value={veh.operation} />
+                )}
+                {veh.brand && (
+                  <SpecCard icon={<Car size={16} />} label="Marca" value={veh.brand} />
+                )}
+                {veh.model && (
+                  <SpecCard icon={<Car size={16} />} label="Modelo" value={veh.model} />
+                )}
+                {veh.year != null && (
+                  <SpecCard icon={<Calendar size={16} />} label="Ano" value={veh.year} />
+                )}
+                {veh.kilometrage != null && (
+                  <SpecCard
+                    icon={<Gauge size={16} />}
+                    label="Kilometraje"
+                    value={`${Number(veh.kilometrage).toLocaleString("es")} km`}
+                  />
+                )}
+                {veh.transmission && (
+                  <SpecCard icon={<Settings2 size={16} />} label="Transmision" value={veh.transmission} />
+                )}
+                {veh.engine && (
+                  <SpecCard icon={<Fuel size={16} />} label="Motor" value={veh.engine} />
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Property detail */}
+          {prop && (
+            <div className="mt-6">
+              <h3 className="mb-3 text-base font-bold">Caracteristicas</h3>
+              <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+                {prop.operation && (
+                  <SpecCard icon={<Building2 size={16} />} label="Operacion" value={prop.operation} />
+                )}
+                {prop.bedrooms != null && prop.bedrooms > 0 && (
+                  <SpecCard icon={<BedDouble size={16} />} label="Dormitorios" value={prop.bedrooms} />
+                )}
+                {prop.bathrooms != null && prop.bathrooms > 0 && (
+                  <SpecCard icon={<Bath size={16} />} label="Banos" value={prop.bathrooms} />
+                )}
+                {prop.floor != null && prop.floor > 0 && (
+                  <SpecCard icon={<Building2 size={16} />} label="Planta" value={`${prop.floor}a`} />
+                )}
+                {prop.surface != null && prop.surface > 0 && (
+                  <SpecCard icon={<Ruler size={16} />} label="Superficie" value={`${prop.surface} m2`} />
+                )}
+                {prop.address && (
+                  <SpecCard icon={<MapPin size={16} />} label="Direccion" value={prop.address} />
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Service detail */}
+          {svc?.offerType && (
+            <div className="mt-6">
+              <h3 className="mb-3 text-base font-bold">Tipo de servicio</h3>
+              <span
+                className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold ${
+                  svc.offerType === "Oferta"
+                    ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                    : "bg-blue-50 text-blue-700 border border-blue-200"
+                }`}
+              >
+                <Tag size={14} />
+                {svc.offerType === "Oferta" ? "Oferta de servicio" : "Demanda de servicio"}
+              </span>
+            </div>
+          )}
+
+          {/* Job detail */}
+          {job?.link && (
+            <div className="mt-6">
+              <a
+                href={job.link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-5 py-3 text-sm font-semibold text-primary transition hover:bg-primary/10"
+              >
+                <ExternalLink size={16} />
+                Ver oferta de empleo
+              </a>
+            </div>
+          )}
+
+          {/* Marketplace detail */}
+          {mkt && (mkt.brand || mkt.model) && (
+            <div className="mt-6">
+              <h3 className="mb-3 text-base font-bold">Detalles del producto</h3>
+              <div className="flex flex-wrap gap-2">
+                {mkt.brand && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-outline-variant/40 bg-surface-low px-3.5 py-2 text-sm font-medium text-on-surface-variant">
+                    Marca: {mkt.brand}
+                  </span>
+                )}
+                {mkt.model && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-outline-variant/40 bg-surface-low px-3.5 py-2 text-sm font-medium text-on-surface-variant">
+                    Modelo: {mkt.model}
+                  </span>
+                )}
+              </div>
             </div>
           )}
 
@@ -390,17 +643,17 @@ export default function ProductDetailPage({
           )}
 
           {/* Safety */}
-          <div className="mt-6 flex items-start gap-3 rounded-2xl border border-tertiary/40 bg-tertiary/10 p-4">
+          <div className="mt-6 flex items-start gap-3 rounded-xl border border-tertiary/40 bg-tertiary/10 p-4">
             <Shield size={20} className="mt-0.5 shrink-0 text-tertiary" />
             <p className="text-sm text-on-surface-variant">
               <span className="font-bold text-on-surface">
-                Pago en persona únicamente.
+                Pago en persona unicamente.
               </span>{" "}
-              Nunca envíes dinero por adelantado y queda en un lugar público.
+              Nunca envies dinero por adelantado y queda en un lugar publico.
             </p>
           </div>
 
-          {/* Reportar anuncio */}
+          {/* Report */}
           <button
             onClick={() => {
               if (!canFavorite) {
@@ -423,7 +676,7 @@ export default function ProductDetailPage({
                   <span className="inline-flex items-center gap-1 text-sm font-semibold text-on-surface">
                     <Star size={14} className="fill-amber-400 text-amber-400" />
                     {rating.average.toFixed(1)}
-                    <span className="font-normal text-muted">· {rating.count}</span>
+                    <span className="font-normal text-muted">- {rating.count}</span>
                   </span>
                 )}
               </div>
@@ -431,7 +684,7 @@ export default function ProductDetailPage({
                 {reviews.slice(0, 4).map((r) => (
                   <div
                     key={r.id}
-                    className="rounded-2xl border border-outline-variant/30 bg-surface-lowest p-4"
+                    className="rounded-xl border border-outline-variant/30 bg-surface-lowest p-4"
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
@@ -474,6 +727,14 @@ export default function ProductDetailPage({
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* Related products */}
+          {relatedProducts.length > 0 && (
+            <div className="mt-8">
+              <h3 className="mb-4 text-base font-bold">Productos similares</h3>
+              <ProductGrid products={relatedProducts} />
             </div>
           )}
         </div>

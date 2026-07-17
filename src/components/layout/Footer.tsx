@@ -40,12 +40,12 @@ export default function Footer() {
         </div>
 
         <div>
-          <h4 className="text-sm font-bold text-on-surface">Ciudades</h4>
+          <h4 className="text-sm font-bold text-on-surface">Información</h4>
           <ul className="mt-3 space-y-2 text-sm text-muted">
-            <li>Malabo</li>
-            <li>Bata</li>
-            <li>Ebibeyin</li>
-            <li>Mongomo</li>
+            <li><Link href="/plans" className="hover:text-primary">Planes</Link></li>
+            <li><Link href="/help" className="hover:text-primary">Ayuda</Link></li>
+            <li><Link href="/terms" className="hover:text-primary">Términos</Link></li>
+            <li><Link href="/privacy" className="hover:text-primary">Privacidad</Link></li>
           </ul>
         </div>
       </div>

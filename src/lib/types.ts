@@ -5,6 +5,9 @@ export interface Seller {
   verified?: boolean;
   location?: string | null;
   bio?: string | null;
+  plan?: string | null;
+  phone?: string | null;
+  showPhone?: boolean;
 }
 
 export interface ProductImage {
@@ -22,6 +25,42 @@ export interface Category {
   parentId?: string | null;
 }
 
+export interface MarketplaceDetail {
+  brand?: string | null;
+  model?: string | null;
+}
+
+export interface VehicleDetail {
+  id?: string;
+  operation?: string | null;
+  brand?: string | null;
+  model?: string | null;
+  year?: number | null;
+  kilometrage?: number | null;
+  transmission?: string | null;
+  engine?: string | null;
+}
+
+export interface PropertyDetail {
+  id?: string;
+  operation?: string | null;
+  bedrooms?: number | null;
+  bathrooms?: number | null;
+  floor?: number | null;
+  surface?: number | null;
+  address?: string | null;
+}
+
+export interface ServiceDetail {
+  id?: string;
+  offerType?: string | null;
+}
+
+export interface JobDetail {
+  id?: string;
+  link?: string | null;
+}
+
 export interface Product {
   id: string;
   title: string;
@@ -33,6 +72,8 @@ export interface Product {
   status?: string;
   views?: number;
   favoritesCount?: number;
+  contacts?: number;
+  impressions?: number;
   bumpedAt?: string;
   boostedUntil?: string | null;
   createdAt?: string;
@@ -40,4 +81,58 @@ export interface Product {
   category?: Category;
   images?: ProductImage[];
   attributes?: { id: string; label: string; value: string }[];
+  marketplaceDetail?: MarketplaceDetail | null;
+  vehicleDetail?: VehicleDetail | null;
+  propertyDetail?: PropertyDetail | null;
+  serviceDetail?: ServiceDetail | null;
+  jobDetail?: JobDetail | null;
+}
+
+export interface CategoryTreeNode {
+  id: string;
+  slug: string;
+  label: string;
+  color?: string | null;
+  icon?: string | null;
+  sortOrder?: number;
+  children?: CategoryTreeNode[];
+}
+
+export interface SavedSearch {
+  id: string;
+  query?: string | null;
+  categoryId?: string | null;
+  city?: string | null;
+  priceMin?: number | null;
+  priceMax?: number | null;
+  createdAt?: string;
+}
+
+export interface UserProfile {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string | null;
+  avatarUrl?: string | null;
+  coverUrl?: string | null;
+  bio?: string | null;
+  location?: string | null;
+  verified: boolean;
+  permission?: string | null;
+  suspended?: boolean;
+  suspendedReason?: string | null;
+  language?: string | null;
+  plan?: string | null;
+  planExpiresAt?: string | null;
+  effectivePlan?: string | null;
+  maxActiveProducts?: number;
+  maxImagesPerProduct?: number;
+  notifMessages?: boolean;
+  notifOffers?: boolean;
+  notifMarketing?: boolean;
+  showEmail?: boolean;
+  showPhone?: boolean;
+  themePreference?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
 }

@@ -14,9 +14,15 @@ export const ME = gql`
       bio
       location
       verified
+      permission
+      suspended
+      suspendedReason
       language
       plan
       planExpiresAt
+      effectivePlan
+      maxActiveProducts
+      maxImagesPerProduct
       notifMessages
       notifOffers
       notifMarketing
@@ -67,6 +73,8 @@ export const GET_USER = gql`
       bio
       location
       verified
+      plan
+      planExpiresAt
       language
       createdAt
       showEmail
@@ -153,80 +161,59 @@ export const GET_ROLES = gql`
 
 // ─── Products ─────────────────────────────────────────────────────────────────
 
+const PRODUCT_CARD_FIELDS = `
+  id
+  title
+  description
+  price
+  discount
+  condition
+  city
+  status
+  views
+  favoritesCount
+  bumpedAt
+  boostedUntil
+  createdAt
+  seller {
+    id
+    name
+    avatarUrl
+    verified
+    plan
+    location
+  }
+  category {
+    id
+    slug
+    label
+    color
+  }
+  images {
+    id
+    url
+    sortOrder
+  }
+`;
+
 export const GET_PRODUCTS = gql`
   query Products($take: Int, $skip: Int) {
     products(take: $take, skip: $skip) {
-      id
-      title
-      description
-      price
-      discount
-      condition
-      city
-      status
-      views
-      favoritesCount
-      createdAt
-      seller {
-        id
-        name
-        avatarUrl
-        verified
-        plan
-        location
-      }
-      category {
-        id
-        slug
-        label
-        color
-      }
-      images {
-        id
-        url
-        sortOrder
-      }
+      ${PRODUCT_CARD_FIELDS}
+      attributes { id label value }
+      marketplaceDetail { brand model }
+      vehicleDetail { id operation brand model year kilometrage transmission engine }
+      propertyDetail { id operation bedrooms bathrooms floor surface address }
+      serviceDetail { id offerType }
+      jobDetail { id link }
     }
   }
 `;
 
-// Admin-only: every product regardless of status (the public `products`
-// query returns active only).
 export const GET_ALL_PRODUCTS = gql`
   query AllProducts($take: Int, $skip: Int, $query: String) {
     allProducts(take: $take, skip: $skip, query: $query) {
-      id
-      title
-      description
-      price
-      discount
-      condition
-      city
-      status
-      views
-      favoritesCount
-      bumpedAt
-      boostedUntil
-      createdAt
-      seller {
-        id
-        name
-        avatarUrl
-        verified
-        plan
-        location
-      }
-      category {
-        id
-        slug
-        label
-        color
-      }
-      images {
-        id
-        url
-        sortOrder
-      }
+      ${PRODUCT_CARD_FIELDS}
     }
   }
 `;
@@ -254,12 +241,16 @@ export const GET_PRODUCT = gql`
         verified
         location
         bio
+        plan
+        phone
+        showPhone
       }
       category {
         id
         slug
         label
         color
+        parentId
       }
       images {
         id
@@ -309,36 +300,10 @@ export const GET_PRODUCT = gql`
 export const SEARCH_PRODUCTS = gql`
   query SearchProducts($input: SearchProductsInput!) {
     searchProducts(input: $input) {
-      id
-      title
-      description
-      price
-      discount
-      condition
-      city
-      status
-      views
-      favoritesCount
-      createdAt
-      seller {
-        id
-        name
-        avatarUrl
-        verified
-        plan
-        location
-      }
-      category {
-        id
-        slug
-        label
-        color
-      }
-      images {
-        id
-        url
-        sortOrder
-      }
+      ${PRODUCT_CARD_FIELDS}
+      propertyDetail { operation }
+      serviceDetail { offerType }
+      vehicleDetail { operation brand model engine transmission }
     }
   }
 `;
@@ -346,33 +311,7 @@ export const SEARCH_PRODUCTS = gql`
 export const PRODUCTS_BY_CATEGORY = gql`
   query ProductsByCategory($categoryId: String!, $take: Int, $skip: Int) {
     productsByCategory(categoryId: $categoryId, take: $take, skip: $skip) {
-      id
-      title
-      price
-      discount
-      condition
-      city
-      views
-      favoritesCount
-      createdAt
-      seller {
-        id
-        name
-        avatarUrl
-        verified
-        plan
-      }
-      category {
-        id
-        slug
-        label
-        color
-      }
-      images {
-        id
-        url
-        sortOrder
-      }
+      ${PRODUCT_CARD_FIELDS}
     }
   }
 `;
@@ -389,6 +328,10 @@ export const PRODUCTS_BY_SELLER = gql`
       status
       views
       favoritesCount
+      contacts
+      impressions
+      bumpedAt
+      boostedUntil
       createdAt
       category {
         id
@@ -401,6 +344,9 @@ export const PRODUCTS_BY_SELLER = gql`
         url
         sortOrder
       }
+      vehicleDetail { operation }
+      propertyDetail { operation }
+      serviceDetail { offerType }
     }
   }
 `;
@@ -421,14 +367,29 @@ export const GET_CATEGORIES = gql`
   }
 `;
 
-export const CATEGORY_BY_SLUG = gql`
-  query CategoryBySlug($slug: String!) {
-    categoryBySlug(slug: $slug) {
+export const CATEGORY_TREE = gql`
+  query CategoryTree {
+    categoryTree {
       id
       slug
       label
       color
       icon
+      sortOrder
+      children {
+        id
+        slug
+        label
+        color
+        icon
+        sortOrder
+        children {
+          id
+          slug
+          label
+          sortOrder
+        }
+      }
     }
   }
 `;
@@ -441,41 +402,12 @@ export const MY_FAVORITES = gql`
       id
       createdAt
       product {
-        id
-        title
-        price
-        discount
-        condition
-        city
-        views
-        favoritesCount
-        createdAt
-        seller {
-          id
-          name
-          avatarUrl
-          verified
-          plan
-        }
-        category {
-          id
-          slug
-          label
-          color
-        }
-        images {
-          id
-          url
-          sortOrder
-        }
+        ${PRODUCT_CARD_FIELDS}
+        vehicleDetail { operation }
+        propertyDetail { operation }
+        serviceDetail { offerType }
       }
     }
-  }
-`;
-
-export const IS_FAVORITED = gql`
-  query IsFavorited($productId: String!) {
-    isFavorited(productId: $productId)
   }
 `;
 
@@ -579,6 +511,7 @@ export const GET_FOLLOWERS = gql`
         avatarUrl
         verified
         location
+        plan
       }
     }
   }
@@ -595,6 +528,7 @@ export const GET_FOLLOWING = gql`
         avatarUrl
         verified
         location
+        plan
       }
     }
   }
@@ -603,6 +537,34 @@ export const GET_FOLLOWING = gql`
 export const IS_FOLLOWING = gql`
   query IsFollowing($userId: String!) {
     isFollowing(userId: $userId)
+  }
+`;
+
+export const FOLLOWERS_COUNT = gql`
+  query FollowersCount($userId: String!) {
+    followersCount(userId: $userId)
+  }
+`;
+
+export const FOLLOWING_COUNT = gql`
+  query FollowingCount($userId: String!) {
+    followingCount(userId: $userId)
+  }
+`;
+
+// ─── Saved Searches ──────────────────────────────────────────────────────────
+
+export const MY_SAVED_SEARCHES = gql`
+  query MySavedSearches {
+    mySavedSearches {
+      id
+      query
+      categoryId
+      city
+      priceMin
+      priceMax
+      createdAt
+    }
   }
 `;
 
@@ -647,7 +609,28 @@ export const GET_REPORTS = gql`
   }
 `;
 
-// ─── Home sections (admin) ────────────────────────────────────────────────────
+// ─── Home sections ───────────────────────────────────────────────────────────
+
+export const GET_HOME_SECTIONS = gql`
+  query HomeSections($viewerKey: String) {
+    homeSections(viewerKey: $viewerKey) {
+      id
+      type
+      title
+      subtitle
+      icon
+      filter
+      config
+      sortOrder
+      products {
+        ${PRODUCT_CARD_FIELDS}
+        vehicleDetail { operation }
+        propertyDetail { operation }
+        serviceDetail { offerType }
+      }
+    }
+  }
+`;
 
 export const GET_ADMIN_HOME_SECTIONS = gql`
   query AdminHomeSections {
@@ -722,6 +705,10 @@ export const GET_NOTIFICATIONS = gql`
       body
       read
       avatar
+      relatedProductId
+      relatedUserId
+      sectionId
+      filterCat
       createdAt
     }
   }
@@ -758,6 +745,18 @@ export const GET_VERIFICATION_REQUESTS = gql`
         id
         name
       }
+    }
+  }
+`;
+
+export const MY_VERIFICATION_REQUEST = gql`
+  query MyVerificationRequest {
+    myVerificationRequest {
+      id
+      status
+      rejectedReason
+      reviewedAt
+      createdAt
     }
   }
 `;

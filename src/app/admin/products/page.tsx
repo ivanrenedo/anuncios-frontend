@@ -7,6 +7,7 @@ import { GET_ALL_PRODUCTS } from "@/graphql/queries";
 import DataTable from "@/components/admin/DataTable";
 import Badge from "@/components/admin/Badge";
 import ProductDetailModal from "@/components/admin/ProductDetailModal";
+import ExportButton from "@/components/admin/ExportButton";
 import { formatPrice, formatDate } from "@/lib/format";
 import { resolveImage } from "@/lib/config";
 import type { Product } from "@/lib/types";
@@ -59,11 +60,14 @@ export default function AdminProducts() {
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-extrabold text-on-surface">Anuncios</h1>
-        <p className="mt-1 text-sm text-muted">
-          Página {page + 1} · {filtered.length} anuncios mostrados
-        </p>
+      <div className="mb-6 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-extrabold text-on-surface">Anuncios</h1>
+          <p className="mt-1 text-sm text-muted">
+            Página {page + 1} · {filtered.length} anuncios mostrados
+          </p>
+        </div>
+        <ExportButton model="products" />
       </div>
 
       <div className="mb-4 flex flex-wrap items-center gap-3">

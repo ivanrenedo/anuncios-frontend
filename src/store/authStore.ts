@@ -1,8 +1,10 @@
 import { create } from "zustand";
 import { client } from "@/lib/apollo";
 import { ME } from "@/graphql/queries";
-import { GOOGLE_LOGIN } from "@/graphql/mutations";
+import { GOOGLE_LOGIN, REFRESH_TOKEN } from "@/graphql/mutations";
 import { TOKEN_KEY } from "@/lib/config";
+
+const REFRESH_TOKEN_KEY = "market_refresh_token";
 
 export interface AuthUser {
   id: string;
@@ -14,6 +16,7 @@ export interface AuthUser {
   phone?: string | null;
   location?: string | null;
   bio?: string | null;
+  permission?: string | null;
 }
 
 export interface GoogleProfile {
@@ -30,6 +33,7 @@ interface AuthState {
   loginWithGoogle: (profile: GoogleProfile) => Promise<void>;
   logout: () => void;
   refresh: () => Promise<void>;
+  attemptTokenRefresh: () => Promise<boolean>;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -50,10 +54,42 @@ export const useAuthStore = create<AuthState>((set) => ({
         fetchPolicy: "network-only",
       });
       const user = (data as { me: AuthUser } | null)?.me ?? null;
-
       set({ user, isAuthenticated: !!user, loading: false });
     } catch {
-      set({ user: null, isAuthenticated: false, loading: false });
+      const refreshed = await useAuthStore.getState().attemptTokenRefresh();
+      if (!refreshed) {
+        set({ user: null, isAuthenticated: false, loading: false });
+      }
+    }
+  },
+
+  attemptTokenRefresh: async () => {
+    const storedRefresh =
+      typeof window !== "undefined"
+        ? localStorage.getItem(REFRESH_TOKEN_KEY)
+        : null;
+    if (!storedRefresh) return false;
+    try {
+      const { data } = await client.mutate({
+        mutation: REFRESH_TOKEN,
+        variables: { token: storedRefresh },
+      });
+      const result = (data as any)?.refreshToken;
+      if (!result?.accessToken) return false;
+      localStorage.setItem(TOKEN_KEY, result.accessToken);
+      if (result.refreshToken) {
+        localStorage.setItem(REFRESH_TOKEN_KEY, result.refreshToken);
+      }
+      const { data: meData } = await client.query({
+        query: ME,
+        fetchPolicy: "network-only",
+      });
+      const user = (meData as { me: AuthUser } | null)?.me ?? null;
+      set({ user, isAuthenticated: !!user, loading: false });
+      return true;
+    } catch {
+      localStorage.removeItem(REFRESH_TOKEN_KEY);
+      return false;
     }
   },
 
@@ -69,14 +105,19 @@ export const useAuthStore = create<AuthState>((set) => ({
         },
       },
     });
-    const token = (data as any)?.googleLogin?.accessToken;
+    const result = (data as any)?.googleLogin;
+    const token = result?.accessToken;
     if (!token) throw new Error("No se pudo iniciar sesión");
     localStorage.setItem(TOKEN_KEY, token);
+    if (result.refreshToken) {
+      localStorage.setItem(REFRESH_TOKEN_KEY, result.refreshToken);
+    }
     await useAuthStore.getState().refresh();
   },
 
   logout: () => {
     localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(REFRESH_TOKEN_KEY);
     set({ user: null, isAuthenticated: false });
     client.clearStore();
   },

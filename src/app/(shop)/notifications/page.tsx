@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useQuery, useMutation } from "@apollo/client/react";
 import { Bell, Check, Trash2 } from "lucide-react";
 import { GET_NOTIFICATIONS } from "@/graphql/queries";
@@ -16,6 +17,7 @@ import Spinner from "@/components/Spinner";
 import Skeleton from "@/components/Skeleton";
 
 export default function NotificationsPage() {
+  const router = useRouter();
   const { isAuthenticated, loading: authLoading } = useAuth();
   const { data, loading, refetch } = useQuery(GET_NOTIFICATIONS, {
     skip: !isAuthenticated,
@@ -36,7 +38,7 @@ export default function NotificationsPage() {
         </p>
         <Link
           href="/login"
-          className="mt-5 inline-block rounded-full bg-primary px-6 py-2.5 text-sm font-bold text-on-primary"
+          className="mt-5 inline-block rounded-lg bg-primary px-6 py-2.5 text-sm font-bold text-on-primary transition hover:bg-primary/90"
         >
           Iniciar sesión
         </Link>
@@ -62,7 +64,7 @@ export default function NotificationsPage() {
                 refetch();
               }}
               disabled={markingAll}
-              className="flex items-center gap-1.5 rounded-full bg-surface-container px-3.5 py-2 text-sm font-semibold text-primary disabled:opacity-60"
+              className="flex items-center gap-1.5 rounded-lg bg-surface-container px-3.5 py-2 text-sm font-semibold text-primary transition hover:bg-surface-high disabled:opacity-60"
             >
               {markingAll ? <Spinner size={15} /> : <Check size={15} />} Marcar todas
             </button>
@@ -75,7 +77,7 @@ export default function NotificationsPage() {
                 refetch();
               }}
               disabled={deletingAll}
-              className="flex items-center gap-1.5 rounded-full bg-surface-container px-3.5 py-2 text-sm font-semibold text-danger disabled:opacity-60"
+              className="flex items-center gap-1.5 rounded-lg bg-surface-container px-3.5 py-2 text-sm font-semibold text-danger transition hover:bg-surface-high disabled:opacity-60"
             >
               {deletingAll ? <Spinner size={15} /> : <Trash2 size={15} />} Borrar todas
             </button>
@@ -86,7 +88,7 @@ export default function NotificationsPage() {
       <div className="mt-5 space-y-2">
         {loading && notifications.length === 0 ? (
           Array.from({ length: 5 }).map((_, i) => (
-            <Skeleton key={i} className="h-20 rounded-2xl" />
+            <Skeleton key={i} className="h-20 rounded-xl" />
           ))
         ) : notifications.length === 0 ? (
           <p className="py-16 text-center text-sm text-muted">
@@ -101,8 +103,13 @@ export default function NotificationsPage() {
                   await markRead({ variables: { id: n.id } });
                   refetch();
                 }
+                if (n.relatedProductId) {
+                  router.push(`/product/${n.relatedProductId}`);
+                } else if (n.relatedUserId) {
+                  router.push(`/user/${n.relatedUserId}`);
+                }
               }}
-              className={`flex w-full items-start gap-3 rounded-2xl border p-4 text-left transition ${
+              className={`flex w-full items-start gap-3 rounded-xl border p-4 text-left transition hover:shadow-soft ${
                 n.read
                   ? "border-outline-variant/30 bg-surface-lowest"
                   : "border-primary/30 bg-primary/5"

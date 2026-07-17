@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useQuery } from "@apollo/client/react";
 import { GET_PRODUCTS, REVIEWS_BY_SELLER, SELLER_RATING } from "@/graphql/queries";
 import DataTable from "@/components/admin/DataTable";
+import ExportButton from "@/components/admin/ExportButton";
 import Skeleton from "@/components/Skeleton";
 import { formatDate } from "@/lib/format";
 import { resolveImage } from "@/lib/config";
@@ -51,9 +52,12 @@ export default function AdminReviews() {
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-extrabold text-on-surface">Valoraciones</h1>
-        <p className="mt-1 text-sm text-muted">Visualiza las reseñas de vendedores</p>
+      <div className="mb-6 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-extrabold text-on-surface">Valoraciones</h1>
+          <p className="mt-1 text-sm text-muted">Visualiza las reseñas de vendedores</p>
+        </div>
+        <ExportButton model="reviews" />
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">

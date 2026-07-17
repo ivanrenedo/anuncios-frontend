@@ -15,6 +15,7 @@ import DataTable from "@/components/admin/DataTable";
 import Badge from "@/components/admin/Badge";
 import Modal from "@/components/admin/Modal";
 import Spinner from "@/components/Spinner";
+import ExportButton from "@/components/admin/ExportButton";
 import { formatDate } from "@/lib/format";
 import { resolveImage } from "@/lib/config";
 import { getErrorMessage } from "@/lib/errors";
@@ -282,11 +283,14 @@ export default function AdminReports() {
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-extrabold text-on-surface">Reportes</h1>
-        <p className="mt-1 text-sm text-muted">
-          {reports.length} totales · {pending} pendientes
-        </p>
+      <div className="mb-6 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-extrabold text-on-surface">Reportes</h1>
+          <p className="mt-1 text-sm text-muted">
+            {reports.length} totales · {pending} pendientes
+          </p>
+        </div>
+        <ExportButton model="reports" />
       </div>
 
       <div className="mb-4 flex flex-wrap gap-3">

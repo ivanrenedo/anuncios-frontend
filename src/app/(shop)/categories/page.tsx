@@ -1,16 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { useCategories } from "@/hooks/useCategories";
+import { useQuery } from "@apollo/client/react";
+import { CATEGORY_TREE } from "@/graphql/queries";
 import { ChevronRight } from "lucide-react";
 import Skeleton from "@/components/Skeleton";
+import type { CategoryTreeNode } from "@/lib/types";
 
 export default function CategoriesPage() {
-  const { categories, loading } = useCategories();
+  const { data, loading } = useQuery(CATEGORY_TREE) as {
+    data: any;
+    loading: boolean;
+  };
 
-  const roots = categories.filter((c: any) => !c.parentId);
-  const childrenOf = (id: string) =>
-    categories.filter((c: any) => c.parentId === id);
+  const roots: CategoryTreeNode[] = data?.categoryTree ?? [];
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
@@ -22,7 +25,7 @@ export default function CategoriesPage() {
       {loading ? (
         <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} className="h-44 rounded-2xl" />
+            <Skeleton key={i} className="h-44 rounded-xl" />
           ))}
         </div>
       ) : roots.length === 0 ? (
@@ -31,49 +34,50 @@ export default function CategoriesPage() {
         </p>
       ) : (
         <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {roots.map((root: any) => {
+          {roots.map((root) => {
             const color = root.color || "#006b5e";
-            const kids = childrenOf(root.id);
+            const kids = root.children ?? [];
             return (
               <div
                 key={root.id}
-                className="overflow-hidden rounded-2xl border border-outline-variant/30 bg-surface-lowest shadow-soft"
+                className="overflow-hidden rounded-xl border border-outline-variant/30 bg-surface-lowest transition hover:shadow-card"
               >
+                {/* Colored header */}
                 <Link
                   href={`/explore?cat=${root.slug}`}
                   className="block px-5 py-4 transition hover:opacity-90"
-                  style={{ backgroundColor: `${color}14` }}
+                  style={{ backgroundColor: `${color}18` }}
                 >
-                  <h2 className="text-lg font-extrabold" style={{ color }}>
-                    {root.label}
-                  </h2>
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-lg font-extrabold" style={{ color }}>
+                      {root.label}
+                    </h2>
+                    <ChevronRight size={20} style={{ color }} />
+                  </div>
                 </Link>
-                <ul className="divide-y divide-outline-variant/20">
-                  {kids.map((kid: any) => (
-                    <li key={kid.id}>
+
+                {/* Subcategories as chips */}
+                {kids.length > 0 ? (
+                  <div className="flex flex-wrap gap-2 px-5 py-4">
+                    {kids.map((kid) => (
                       <Link
+                        key={kid.id}
                         href={`/explore?cat=${kid.slug}`}
-                        className="flex items-center justify-between px-5 py-3 transition hover:bg-surface-container"
+                        className="inline-flex items-center gap-1.5 rounded-full border border-outline-variant/30 px-3 py-1.5 text-sm font-medium text-on-surface transition hover:bg-surface-container hover:border-primary/40"
                       >
-                        <div className="flex items-center gap-3">
-                          <span
-                            className="h-2.5 w-2.5 rounded-full"
-                            style={{ backgroundColor: kid.color || color }}
-                          />
-                          <p className="text-sm font-semibold text-on-surface">
-                            {kid.label}
-                          </p>
-                        </div>
-                        <ChevronRight size={18} className="text-muted" />
+                        <span
+                          className="h-2 w-2 rounded-full shrink-0"
+                          style={{ backgroundColor: kid.color || color }}
+                        />
+                        {kid.label}
                       </Link>
-                    </li>
-                  ))}
-                  {kids.length === 0 && (
-                    <li className="px-5 py-3 text-sm text-muted">
-                      Sin subcategorías
-                    </li>
-                  )}
-                </ul>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="px-5 py-4">
+                    <p className="text-sm text-muted">Sin subcategorías</p>
+                  </div>
+                )}
               </div>
             );
           })}

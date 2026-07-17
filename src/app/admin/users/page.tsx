@@ -14,6 +14,7 @@ import {
 import DataTable from "@/components/admin/DataTable";
 import Badge from "@/components/admin/Badge";
 import Modal from "@/components/admin/Modal";
+import ExportButton from "@/components/admin/ExportButton";
 import { formatDate } from "@/lib/format";
 import { resolveImage } from "@/lib/config";
 import { useAbilities } from "@/hooks/useAbilities";
@@ -240,14 +241,17 @@ export default function AdminUsers() {
           <h1 className="text-2xl font-extrabold text-on-surface">Usuarios</h1>
           <p className="mt-1 text-sm text-muted">{users.length} usuarios</p>
         </div>
-        {canCreate && (
-          <button
-            onClick={openCreate}
-            className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-on-primary transition hover:opacity-90"
-          >
-            + Nuevo usuario
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          <ExportButton model="users" />
+          {canCreate && (
+            <button
+              onClick={openCreate}
+              className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-on-primary transition hover:opacity-90"
+            >
+              + Nuevo usuario
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="mb-4">

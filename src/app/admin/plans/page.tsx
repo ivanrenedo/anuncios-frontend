@@ -1,17 +1,26 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation } from "@apollo/client/react";
 import { GET_USERS } from "@/graphql/queries";
-import { CHANGE_PLAN, GET_PLAN_HISTORY } from "@/graphql/mutations";
+import {
+  CHANGE_PLAN,
+  GET_PLAN_HISTORY,
+  DELETE_PLAN_CHANGES,
+} from "@/graphql/mutations";
 import DataTable from "@/components/admin/DataTable";
 import Badge from "@/components/admin/Badge";
 import Modal from "@/components/admin/Modal";
+import ExportButton from "@/components/admin/ExportButton";
 import Spinner from "@/components/Spinner";
 import { formatDate } from "@/lib/format";
 import { resolveImage } from "@/lib/config";
 import { getErrorMessage } from "@/lib/errors";
-import { Crown, Star, User, Search, History } from "lucide-react";
+import { useAbilities } from "@/hooks/useAbilities";
+import { Crown, Star, User, Search, History, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
+
+const USERS_PAGE_SIZE = 20;
+const HISTORY_PAGE_SIZE = 10;
 
 interface UserRow {
   id: string;
@@ -35,6 +44,17 @@ const PLAN_COLORS: Record<string, string> = {
   PREMIUM: "sold",
 };
 
+// A paid plan whose expiry date has already passed counts as FREE — mirror the
+// backend downgrade (effectivePlan + the daily expiry cron) so the admin table
+// doesn't keep showing a stale paid badge in the window before the cron runs.
+const effectivePlanOf = (u: {
+  plan?: string;
+  planExpiresAt?: string | null;
+}): string =>
+  u.planExpiresAt && new Date(u.planExpiresAt) < new Date()
+    ? "FREE"
+    : u.plan || "FREE";
+
 export default function AdminPlans() {
   const { data, loading, refetch } = useQuery(GET_USERS) as {
     data: any;
@@ -49,13 +69,25 @@ export default function AdminPlans() {
   const [error, setError] = useState("");
 
   const [historyUser, setHistoryUser] = useState<UserRow | null>(null);
-  const { data: historyData, loading: historyLoading } = useQuery(
-    GET_PLAN_HISTORY,
-    {
+  const [historyPage, setHistoryPage] = useState(0);
+  const [historySelected, setHistorySelected] = useState<Set<string>>(new Set());
+  const [historyError, setHistoryError] = useState("");
+  const { isSuperAdmin } = useAbilities();
+  const { data: historyData, loading: historyLoading, refetch: refetchHistory } =
+    useQuery(GET_PLAN_HISTORY, {
       variables: { userId: historyUser?.id ?? "" },
       skip: !historyUser,
-    }
-  ) as { data: any; loading: boolean };
+      fetchPolicy: "cache-and-network",
+    }) as { data: any; loading: boolean; refetch: () => Promise<unknown> };
+  const [deletePlanChanges, { loading: deletingHistory }] =
+    useMutation(DELETE_PLAN_CHANGES);
+
+  // Reset paging + selection whenever the modal opens on a different user.
+  useEffect(() => {
+    setHistoryPage(0);
+    setHistorySelected(new Set());
+    setHistoryError("");
+  }, [historyUser?.id]);
 
   const users: UserRow[] = data?.users ?? [];
 
@@ -70,7 +102,7 @@ export default function AdminPlans() {
       );
     }
     if (filterPlan !== "ALL") {
-      result = result.filter((u) => (u.plan || "FREE") === filterPlan);
+      result = result.filter((u) => effectivePlanOf(u) === filterPlan);
     }
     return result;
   }, [users, search, filterPlan]);
@@ -78,7 +110,7 @@ export default function AdminPlans() {
   const stats = useMemo(() => {
     const counts = { FREE: 0, STAR: 0, PREMIUM: 0 };
     for (const u of users) {
-      const p = (u.plan || "FREE") as keyof typeof counts;
+      const p = effectivePlanOf(u) as keyof typeof counts;
       if (p in counts) counts[p]++;
     }
     return counts;
@@ -179,7 +211,7 @@ export default function AdminPlans() {
       key: "plan",
       label: "Plan",
       render: (u: UserRow) => {
-        const plan = u.plan || "FREE";
+        const plan = effectivePlanOf(u);
         return (
           <div className="flex items-center gap-2">
             {planIcon(plan)}
@@ -229,17 +261,82 @@ export default function AdminPlans() {
     </div>
   );
 
-  const history = historyData?.planHistory ?? [];
+  const history: any[] = historyData?.planHistory ?? [];
+  const historyTotalPages = Math.max(
+    1,
+    Math.ceil(history.length / HISTORY_PAGE_SIZE),
+  );
+  const historyCurrentPage = Math.min(historyPage, historyTotalPages - 1);
+  const historyPageItems = history.slice(
+    historyCurrentPage * HISTORY_PAGE_SIZE,
+    historyCurrentPage * HISTORY_PAGE_SIZE + HISTORY_PAGE_SIZE,
+  );
+
+  const toggleHistorySelect = (id: string) => {
+    setHistorySelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+  const toggleHistorySelectPage = () => {
+    setHistorySelected((prev) => {
+      const pageIds = historyPageItems.map((h) => h.id);
+      const allSelected =
+        pageIds.length > 0 && pageIds.every((id) => prev.has(id));
+      const next = new Set(prev);
+      if (allSelected) pageIds.forEach((id) => next.delete(id));
+      else pageIds.forEach((id) => next.add(id));
+      return next;
+    });
+  };
+
+  const runDeleteHistory = async (ids: string[]) => {
+    if (ids.length === 0) return;
+    setHistoryError("");
+    try {
+      await deletePlanChanges({ variables: { ids } });
+      setHistorySelected((prev) => {
+        const next = new Set(prev);
+        ids.forEach((id) => next.delete(id));
+        return next;
+      });
+      await refetchHistory();
+    } catch (e) {
+      setHistoryError(
+        getErrorMessage(e, "No se pudo eliminar el historial."),
+      );
+    }
+  };
+  const deleteHistoryRow = (id: string) => {
+    if (!confirm("¿Eliminar esta entrada del historial? No se puede deshacer.")) return;
+    runDeleteHistory([id]);
+  };
+  const deleteHistorySelected = () => {
+    const ids = [...historySelected];
+    if (ids.length === 0) return;
+    if (
+      !confirm(
+        `¿Eliminar ${ids.length} entrada(s) del historial? No se puede deshacer.`,
+      )
+    )
+      return;
+    runDeleteHistory(ids);
+  };
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-extrabold text-on-surface">
-          Gestión de planes
-        </h1>
-        <p className="mt-1 text-sm text-muted">
-          Asigna planes Estrella y Premium a los usuarios
-        </p>
+      <div className="mb-6 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-extrabold text-on-surface">
+            Gestión de planes
+          </h1>
+          <p className="mt-1 text-sm text-muted">
+            Asigna planes Estrella y Premium a los usuarios
+          </p>
+        </div>
+        <ExportButton model="plan-changes" label="Exportar historial" />
       </div>
 
       {/* Stats */}
@@ -265,7 +362,7 @@ export default function AdminPlans() {
       {expiringSoon.length > 0 && (
         <div className="mb-6 rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4">
           <p className="mb-3 text-sm font-semibold text-on-surface">
-            ⏳ Renovaciones próximas ({expiringSoon.length}) — expiran en los próximos 7 días
+            ⏳ Renovaciones próximas ({expiringSoon.length}) — expiran en los próximos días
           </p>
           <div className="space-y-2">
             {expiringSoon.map((u) => (
@@ -342,6 +439,7 @@ export default function AdminPlans() {
         loading={loading}
         actions={actions}
         emptyMessage="No se encontraron usuarios"
+        pageSize={USERS_PAGE_SIZE}
       />
 
       {/* Edit modal */}
@@ -429,7 +527,7 @@ export default function AdminPlans() {
         onClose={() => setHistoryUser(null)}
         title={`Historial de planes — ${historyUser?.name}`}
       >
-        {historyLoading ? (
+        {historyLoading && history.length === 0 ? (
           <div className="flex justify-center py-8">
             <Spinner />
           </div>
@@ -438,34 +536,143 @@ export default function AdminPlans() {
             Sin cambios de plan registrados
           </p>
         ) : (
-          <div className="max-h-80 space-y-3 overflow-y-auto">
-            {history.map((h: any) => (
-              <div
-                key={h.id}
-                className="rounded-xl border border-outline-variant/30 bg-surface-low px-4 py-3"
-              >
-                <div className="flex items-center gap-2 text-sm">
-                  <Badge variant={PLAN_COLORS[h.oldPlan] as any}>
-                    {PLAN_LABELS[h.oldPlan]}
-                  </Badge>
-                  <span className="text-muted">→</span>
-                  <Badge variant={PLAN_COLORS[h.newPlan] as any}>
-                    {PLAN_LABELS[h.newPlan]}
-                  </Badge>
-                </div>
-                <div className="mt-1 flex gap-4 text-xs text-muted">
-                  <span>{formatDate(h.createdAt)}</span>
-                  {h.expiresAt && (
-                    <span>Expira: {formatDate(h.expiresAt)}</span>
-                  )}
-                </div>
-                {h.reason && (
-                  <p className="mt-1 text-xs text-on-surface-variant">
-                    {h.reason}
-                  </p>
+          <div className="space-y-3">
+            {historyError && (
+              <div className="rounded-xl border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger">
+                {historyError}
+              </div>
+            )}
+
+            {isSuperAdmin && (
+              <div className="flex items-center justify-between rounded-xl border border-outline-variant/40 bg-surface-low px-3 py-2">
+                <label className="flex cursor-pointer items-center gap-2 text-xs text-muted">
+                  <input
+                    type="checkbox"
+                    checked={
+                      historyPageItems.length > 0 &&
+                      historyPageItems.every((h) => historySelected.has(h.id))
+                    }
+                    onChange={toggleHistorySelectPage}
+                    className="h-4 w-4 cursor-pointer accent-primary"
+                  />
+                  {historySelected.size > 0
+                    ? `${historySelected.size} seleccionada(s)`
+                    : "Seleccionar página"}
+                </label>
+                {historySelected.size > 0 && (
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setHistorySelected(new Set())}
+                      className="rounded-lg px-2.5 py-1 text-xs font-medium text-muted transition hover:bg-surface-container"
+                    >
+                      Limpiar
+                    </button>
+                    <button
+                      onClick={deleteHistorySelected}
+                      disabled={deletingHistory}
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-danger px-2.5 py-1 text-xs font-semibold text-white disabled:opacity-60"
+                    >
+                      {deletingHistory ? (
+                        <Spinner size={12} />
+                      ) : (
+                        <Trash2 size={12} />
+                      )}
+                      Eliminar
+                    </button>
+                  </div>
                 )}
               </div>
-            ))}
+            )}
+
+            <div className="max-h-80 space-y-3 overflow-y-auto">
+              {historyPageItems.map((h) => (
+                <div
+                  key={h.id}
+                  className="flex items-start gap-3 rounded-xl border border-outline-variant/30 bg-surface-low px-4 py-3"
+                >
+                  {isSuperAdmin && (
+                    <input
+                      type="checkbox"
+                      checked={historySelected.has(h.id)}
+                      onChange={() => toggleHistorySelect(h.id)}
+                      className="mt-1 h-4 w-4 cursor-pointer accent-primary"
+                      aria-label="Seleccionar"
+                    />
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 text-sm">
+                      <Badge variant={PLAN_COLORS[h.oldPlan] as any}>
+                        {PLAN_LABELS[h.oldPlan]}
+                      </Badge>
+                      <span className="text-muted">→</span>
+                      <Badge variant={PLAN_COLORS[h.newPlan] as any}>
+                        {PLAN_LABELS[h.newPlan]}
+                      </Badge>
+                    </div>
+                    <div className="mt-1 flex gap-4 text-xs text-muted">
+                      <span>{formatDate(h.createdAt)}</span>
+                      {h.expiresAt && (
+                        <span>Expira: {formatDate(h.expiresAt)}</span>
+                      )}
+                    </div>
+                    {h.reason && (
+                      <p className="mt-1 text-xs text-on-surface-variant">
+                        {h.reason}
+                      </p>
+                    )}
+                  </div>
+                  {isSuperAdmin && (
+                    <button
+                      type="button"
+                      onClick={() => deleteHistoryRow(h.id)}
+                      disabled={deletingHistory}
+                      title="Eliminar entrada"
+                      className="inline-grid h-8 w-8 place-items-center rounded-lg border border-outline-variant/50 bg-surface-lowest text-danger transition hover:bg-danger/10 disabled:opacity-40"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {historyTotalPages > 1 && (
+              <div className="flex items-center justify-between text-xs text-muted">
+                <span>
+                  {historyCurrentPage * HISTORY_PAGE_SIZE + 1}–
+                  {Math.min(
+                    (historyCurrentPage + 1) * HISTORY_PAGE_SIZE,
+                    history.length,
+                  )}{" "}
+                  de {history.length}
+                </span>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setHistoryPage((p) => Math.max(0, p - 1))}
+                    disabled={historyCurrentPage === 0}
+                    className="grid h-7 w-7 place-items-center rounded-lg border border-outline-variant/50 bg-surface-lowest text-on-surface transition hover:bg-surface-container disabled:opacity-40"
+                  >
+                    <ChevronLeft size={14} />
+                  </button>
+                  <span className="px-1 font-medium text-on-surface">
+                    {historyCurrentPage + 1} / {historyTotalPages}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setHistoryPage((p) =>
+                        Math.min(historyTotalPages - 1, p + 1),
+                      )
+                    }
+                    disabled={historyCurrentPage >= historyTotalPages - 1}
+                    className="grid h-7 w-7 place-items-center rounded-lg border border-outline-variant/50 bg-surface-lowest text-on-surface transition hover:bg-surface-container disabled:opacity-40"
+                  >
+                    <ChevronRight size={14} />
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </Modal>

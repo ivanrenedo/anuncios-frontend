@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 import { useQuery, useMutation } from "@apollo/client/react";
-import { BadgeCheck, User as UserIcon, X, Check, Clock, Trash2 } from "lucide-react";
+import { BadgeCheck, User as UserIcon, X, Check, Trash2 } from "lucide-react";
 import { GET_VERIFICATION_REQUESTS } from "@/graphql/queries";
 import { APPROVE_VERIFICATION, REJECT_VERIFICATION, DELETE_VERIFICATION_REQUESTS } from "@/graphql/mutations";
 import DataTable from "@/components/admin/DataTable";
 import Badge from "@/components/admin/Badge";
 import Modal from "@/components/admin/Modal";
+import ExportButton from "@/components/admin/ExportButton";
 import Spinner from "@/components/Spinner";
 import { formatDate } from "@/lib/format";
 import { resolveImage } from "@/lib/config";
@@ -155,13 +156,16 @@ export default function AdminVerifications() {
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-extrabold text-on-surface">
-          Verificaciones
-        </h1>
-        <p className="mt-1 text-sm text-muted">
-          {requests.length} totales · {pendingCount} pendientes
-        </p>
+      <div className="mb-6 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-extrabold text-on-surface">
+            Verificaciones
+          </h1>
+          <p className="mt-1 text-sm text-muted">
+            {requests.length} totales · {pendingCount} pendientes
+          </p>
+        </div>
+        <ExportButton model="verifications" />
       </div>
 
       <div className="mb-4 flex flex-wrap gap-3">
