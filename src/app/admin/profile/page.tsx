@@ -380,7 +380,7 @@ export default function AdminProfile() {
          
           </SettingsSection>
 
-          <p className="text-center text-xs text-muted">Market EG · Panel admin</p>
+          <p className="text-center text-xs text-muted">Bomell · Panel admin</p>
         </div>
       </Modal>
     </div>

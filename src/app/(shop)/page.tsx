@@ -167,7 +167,7 @@ export default function HomePage() {
             <section className="pt-10">
               <SectionHeader
                 title="Destacados"
-                subtitle="Lo más visto en Market EG"
+                subtitle="Lo más visto en Bomell"
                 icon={<TrendingUp size={22} className="text-primary" />}
                 href="/explore"
               />

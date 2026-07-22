@@ -30,6 +30,7 @@ import {
 import { ADMIN_TOKEN_KEY, resolveImage } from "@/lib/config";
 import { ADMIN_ME } from "@/graphql/queries";
 import { useThemeStore } from "@/store/themeStore";
+import BrandLogo from "@/components/layout/BrandLogo";
 
 const THEME_ICON = { system: Monitor, light: Sun, dark: Moon } as const;
 const THEME_LABEL = { system: "Sistema", light: "Claro", dark: "Oscuro" } as const;
@@ -138,15 +139,15 @@ export default function Sidebar() {
 
   return (
     <aside className="fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-outline-variant/30 bg-surface-lowest">
-      <div className="flex items-center gap-2 px-6 py-5">
-        <span className="grid h-9 w-9 place-items-center rounded-xl bg-primary text-sm font-extrabold text-on-primary">
-          M
-        </span>
+      <Link href="/admin" className="flex items-center gap-2 px-6 py-5" aria-label="Bomell admin — inicio">
+        <BrandLogo size={36} showWordmark={false} />
         <div>
-          <p className="text-sm font-extrabold leading-tight">Market EG</p>
+          <p className="text-sm font-extrabold leading-tight text-on-surface">
+            bomell<span style={{ color: "var(--color-primary)" }}>.</span>
+          </p>
           <p className="text-xs text-muted">Panel admin</p>
         </div>
-      </div>
+      </Link>
 
       <nav className="flex-1 overflow-y-auto px-3 py-2">
         {fixedLinks.map(({ href, label, Icon, exact }) => {

@@ -98,7 +98,7 @@ export default function ReportModal({
             </div>
             <h3 className="text-lg font-bold text-on-surface">Reporte enviado</h3>
             <p className="mx-auto mt-1 max-w-xs text-sm text-muted">
-              Gracias por ayudarnos a mantener Market EG seguro. Nuestro equipo lo
+              Gracias por ayudarnos a mantener Bomell seguro. Nuestro equipo lo
               revisará.
             </p>
             <button

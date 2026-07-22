@@ -343,7 +343,7 @@ export default function EditProfilePage() {
             />
             <Toggle
               label="Marketing"
-              description="Recibir novedades y promociones de Market EG"
+              description="Recibir novedades y promociones de Bomell"
               checked={notifMarketing}
               onChange={setNotifMarketing}
             />

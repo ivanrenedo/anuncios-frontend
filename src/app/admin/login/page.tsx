@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ShieldCheck, Lock } from "lucide-react";
+import { Lock } from "lucide-react";
 import { ADMIN_TOKEN_KEY } from "@/lib/config";
 import ThemeToggle from "@/components/layout/ThemeToggle";
+import BrandLogo from "@/components/layout/BrandLogo";
 import Spinner from "@/components/Spinner";
 
 export default function AdminLoginPage() {
@@ -42,11 +43,11 @@ export default function AdminLoginPage() {
     <div className="relative grid min-h-screen place-items-center bg-gradient-to-br from-surface via-surface-low to-primary-soft px-4">
       <ThemeToggle className="absolute right-4 top-4" />
       <div className="w-full max-w-md">
-        <div className="mb-8 text-center">
-          <div className="mx-auto mb-3 grid h-14 w-14 place-items-center rounded-2xl bg-primary/10 text-primary backdrop-blur">
-            <ShieldCheck size={28} />
-          </div>
-          <h1 className="text-3xl font-extrabold text-on-surface">Market EG</h1>
+        <div className="mb-8 flex flex-col items-center text-center">
+          <BrandLogo size={64} showWordmark={false} />
+          <h1 className="mt-4 text-3xl font-extrabold text-on-surface">
+            bomell<span style={{ color: "var(--color-primary)" }}>.</span>
+          </h1>
           <p className="mt-1 text-muted">Panel de administración</p>
         </div>
 
@@ -63,7 +64,7 @@ export default function AdminLoginPage() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="admin@marketeg.com"
+              placeholder="admin@bomell.com"
               autoComplete="username"
               className="h-11 w-full rounded-xl border border-outline-variant/50 bg-surface-lowest px-4 text-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
             />

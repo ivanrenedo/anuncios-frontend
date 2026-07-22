@@ -50,7 +50,7 @@ export default function LoginPage() {
         </div>
 
         <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">
-          Bienvenido a Market EG
+          Bienvenido a Bomell
         </h1>
         <p className="mt-2 max-w-sm text-[15px] leading-6 text-on-surface-variant">
           Compra y vende anuncios en Guinea Ecuatorial de forma segura y

@@ -17,6 +17,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { resolveImage } from "@/lib/config";
 import { UNREAD_COUNT, GET_CATEGORIES } from "@/graphql/queries";
 import ThemeToggle from "./ThemeToggle";
+import BrandLogo from "./BrandLogo";
 
 export default function Header() {
   const router = useRouter();
@@ -46,13 +47,12 @@ export default function Header() {
       {/* ── Main bar ─────────────────────────────────────────────── */}
       <div className="mx-auto flex h-14 max-w-7xl items-center gap-3 px-4 sm:h-16 sm:px-6">
         {/* Logo */}
-        <Link href="/" className="flex shrink-0 items-center gap-2">
-          <span className="grid h-9 w-9 place-items-center rounded-xl bg-primary text-sm font-extrabold text-on-primary">
-            M
-          </span>
-          <span className="hidden text-lg font-extrabold tracking-tight text-on-surface sm:block">
-            Market EG
-          </span>
+        <Link href="/" className="flex shrink-0 items-center" aria-label="Bomell — inicio">
+          {/* Wordmark hidden on mobile — mark alone reads clean at 36px */}
+          <BrandLogo
+            size={36}
+            wordmarkClassName="hidden text-lg font-extrabold tracking-tight text-on-surface sm:ml-2 sm:block sm:text-xl"
+          />
         </Link>
 
         {/* Search (desktop) */}

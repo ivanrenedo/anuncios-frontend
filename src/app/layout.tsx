@@ -10,9 +10,26 @@ const manrope = Manrope({
 });
 
 export const metadata: Metadata = {
-  title: "Market EG — Comprar y vender en Guinea Ecuatorial",
+  title: "Bomell — Comprar y vender en Guinea Ecuatorial",
   description:
     "El marketplace de Guinea Ecuatorial. Compra y vende moda, tecnología, coches, hogar y servicios cerca de ti.",
+  icons: {
+    icon: [
+      { url: "/favicon.png", sizes: "48x48", type: "image/png" },
+      { url: "/favicon-32.png", sizes: "32x32", type: "image/png" },
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+    ],
+    apple: "/apple-touch-icon.png",
+  },
+  themeColor: "#006b5e",
+  openGraph: {
+    title: "Bomell — El marketplace de Guinea Ecuatorial",
+    description:
+      "Compra y vende cerca de ti, con vendedores verificados. Malabo, Bata y toda Guinea Ecuatorial.",
+    images: [{ url: "/icon-512.png", width: 512, height: 512 }],
+    locale: "es_GQ",
+    type: "website",
+  },
 };
 
 // Runs before paint so the correct theme class is on <html> with no flash.

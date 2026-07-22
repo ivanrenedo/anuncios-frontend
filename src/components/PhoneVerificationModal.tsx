@@ -103,7 +103,7 @@ export default function PhoneVerificationModal({
               Verifica tu teléfono
             </h2>
             <p className="mb-6 text-center text-sm text-on-surface-variant">
-              Para usar Market EG necesitas verificar tu número de teléfono.
+              Para usar Bomell necesitas verificar tu número de teléfono.
             </p>
 
             <div className="mb-4 flex gap-2">

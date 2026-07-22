@@ -207,7 +207,7 @@ export default function ProductDetailPage({
       navigator
         .share({
           title: product.title,
-          text: `Mira este anuncio en Market EG: ${product.title}`,
+          text: `Mira este anuncio en Bomell: ${product.title}`,
           url: typeof window !== "undefined" ? window.location.href : "",
         })
         .catch(() => {});
@@ -229,7 +229,7 @@ export default function ProductDetailPage({
 
     if (type === "whatsapp") {
       const msg = encodeURIComponent(
-        `Hola, vi tu anuncio "${product.title}" en Market EG`
+        `Hola, vi tu anuncio "${product.title}" en Bomell`
       );
       window.open(`https://wa.me/${sellerPhone}?text=${msg}`, "_blank");
     } else {

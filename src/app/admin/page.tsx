@@ -336,7 +336,7 @@ export default function AdminDashboard() {
     <div>
       <div className="mb-8">
         <h1 className="text-2xl font-extrabold text-on-surface">Dashboard</h1>
-        <p className="mt-1 text-sm text-muted">Resumen general de Market EG</p>
+        <p className="mt-1 text-sm text-muted">Resumen general de Bomell</p>
       </div>
 
       {/* KPIs */}
