@@ -40,7 +40,7 @@ export default function AdminLoginPage() {
   };
 
   return (
-    <div className="relative grid min-h-screen place-items-center bg-gradient-to-br from-surface via-surface-low to-primary-soft px-4">
+    <div className="relative grid min-h-screen place-items-center bg-linear-to-br from-surface via-surface-low to-primary-soft px-4">
       <ThemeToggle className="absolute right-4 top-4" />
       <div className="w-full max-w-md">
         <div className="mb-8 flex flex-col items-center text-center">
