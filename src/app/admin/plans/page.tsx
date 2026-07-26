@@ -137,7 +137,7 @@ export default function AdminPlans() {
     const phone = (u.phone ?? "").replace(/[^0-9]/g, "");
     if (!phone) return;
     const msg = encodeURIComponent(
-      `Hola ${u.name}, tu plan ${PLAN_LABELS[u.plan ?? "FREE"]} de Bomell expira el ${formatDate(u.planExpiresAt)}. ¿Quieres renovarlo?`,
+      `Hola ${u.name}, tu plan ${PLAN_LABELS[u.plan ?? "FREE"]} de Bomelh expira el ${formatDate(u.planExpiresAt)}. ¿Quieres renovarlo?`,
     );
     window.open(`https://wa.me/${phone}?text=${msg}`, "_blank");
   };

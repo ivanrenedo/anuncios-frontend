@@ -193,6 +193,8 @@ const PRODUCT_CARD_FIELDS = `
     id
     url
     sortOrder
+        type
+        thumbnailUrl
   }
 `;
 
@@ -201,8 +203,8 @@ export const GET_PRODUCTS = gql`
     products(take: $take, skip: $skip) {
       ${PRODUCT_CARD_FIELDS}
       attributes { id label value }
-      marketplaceDetail { brand model }
-      vehicleDetail { id operation brand model year kilometrage transmission engine }
+      marketplaceDetail { brand model colors }
+      vehicleDetail { id operation brand model year kilometrage transmission engine colors }
       propertyDetail { id operation bedrooms bathrooms floor surface address }
       serviceDetail { id offerType }
       jobDetail { id link }
@@ -256,6 +258,8 @@ export const GET_PRODUCT = gql`
         id
         url
         sortOrder
+        type
+        thumbnailUrl
       }
       attributes {
         id
@@ -265,6 +269,7 @@ export const GET_PRODUCT = gql`
       marketplaceDetail {
         brand
         model
+        colors
       }
       vehicleDetail {
         id
@@ -275,6 +280,7 @@ export const GET_PRODUCT = gql`
         kilometrage
         transmission
         engine
+        colors
       }
       propertyDetail {
         id
@@ -343,6 +349,8 @@ export const PRODUCTS_BY_SELLER = gql`
         id
         url
         sortOrder
+        type
+        thumbnailUrl
       }
       vehicleDetail { operation }
       propertyDetail { operation }
@@ -425,6 +433,8 @@ export const FAVORITES_BY_USER = gql`
           id
           url
           sortOrder
+        type
+        thumbnailUrl
         }
       }
     }
@@ -603,6 +613,8 @@ export const GET_REPORTS = gql`
           id
           url
           sortOrder
+        type
+        thumbnailUrl
         }
       }
     }

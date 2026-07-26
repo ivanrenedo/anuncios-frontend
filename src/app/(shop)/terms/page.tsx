@@ -13,15 +13,15 @@ interface Section {
 const SECTIONS: Section[] = [
   {
     title: "1. Informacion general",
-    body: "Bomell es una plataforma de anuncios clasificados que permite a los usuarios de Guinea Ecuatorial publicar, buscar y contactar sobre productos y servicios. Bomell no es parte en las transacciones entre usuarios y actua unicamente como intermediario tecnologico.\n\nAl registrarte o usar la aplicacion, aceptas estos Terminos y Condiciones en su totalidad. Si no estas de acuerdo, no utilices la plataforma.",
+    body: "Bomelh es una plataforma de anuncios clasificados que permite a los usuarios de Guinea Ecuatorial publicar, buscar y contactar sobre productos y servicios. Bomelh no es parte en las transacciones entre usuarios y actua unicamente como intermediario tecnologico.\n\nAl registrarte o usar la aplicacion, aceptas estos Terminos y Condiciones en su totalidad. Si no estas de acuerdo, no utilices la plataforma.",
   },
   {
     title: "2. Registro y cuenta",
-    body: "Para usar Bomell necesitas crear una cuenta mediante Google Sign-In.\nDebes proporcionar informacion veraz y mantenerla actualizada.\nEres responsable de la seguridad de tu cuenta y de toda actividad que se realice desde ella.\nNo esta permitido crear multiples cuentas ni compartir tu acceso con terceros.\nDebes tener al menos 18 anos para registrarte.",
+    body: "Para usar Bomelh necesitas crear una cuenta mediante Google Sign-In.\nDebes proporcionar informacion veraz y mantenerla actualizada.\nEres responsable de la seguridad de tu cuenta y de toda actividad que se realice desde ella.\nNo esta permitido crear multiples cuentas ni compartir tu acceso con terceros.\nDebes tener al menos 18 anos para registrarte.",
   },
   {
     title: "3. Publicacion de anuncios",
-    body: "Los anuncios deben describir productos o servicios reales y disponibles.\nLas fotos deben corresponder al producto o servicio ofrecido.\nLos precios deben expresarse en francos CFA (XAF) y reflejar el valor real del articulo.\nEsta prohibido publicar anuncios de productos ilegales, falsificados, robados, armas, drogas, medicamentos sin receta, animales protegidos o cualquier articulo cuya venta este prohibida por la legislacion de Guinea Ecuatorial.\nEsta prohibido publicar contenido ofensivo, discriminatorio, violento o sexual.\nBomell se reserva el derecho de eliminar cualquier anuncio que incumpla estas normas sin previo aviso.",
+    body: "Los anuncios deben describir productos o servicios reales y disponibles.\nLas fotos deben corresponder al producto o servicio ofrecido.\nLos precios deben expresarse en francos CFA (XAF) y reflejar el valor real del articulo.\nEsta prohibido publicar anuncios de productos ilegales, falsificados, robados, armas, drogas, medicamentos sin receta, animales protegidos o cualquier articulo cuya venta este prohibida por la legislacion de Guinea Ecuatorial.\nEsta prohibido publicar contenido ofensivo, discriminatorio, violento o sexual.\nBomelh se reserva el derecho de eliminar cualquier anuncio que incumpla estas normas sin previo aviso.",
   },
   {
     title: "4. Conducta del usuario",
@@ -29,27 +29,27 @@ const SECTIONS: Section[] = [
   },
   {
     title: "5. Transacciones entre usuarios",
-    body: "Bomell no participa, media ni garantiza las transacciones entre usuarios. No somos responsables de:\n\nLa calidad, seguridad o legalidad de los productos o servicios publicados.\nLa veracidad de los anuncios o la identidad de los usuarios.\nLa capacidad de los vendedores para vender o de los compradores para pagar.\nProblemas derivados de envios, entregas o pagos.\n\nTe recomendamos seguir los consejos de seguridad disponibles en el Centro de ayuda antes de realizar cualquier transaccion.",
+    body: "Bomelh no participa, media ni garantiza las transacciones entre usuarios. No somos responsables de:\n\nLa calidad, seguridad o legalidad de los productos o servicios publicados.\nLa veracidad de los anuncios o la identidad de los usuarios.\nLa capacidad de los vendedores para vender o de los compradores para pagar.\nProblemas derivados de envios, entregas o pagos.\n\nTe recomendamos seguir los consejos de seguridad disponibles en el Centro de ayuda antes de realizar cualquier transaccion.",
   },
   {
     title: "6. Propiedad intelectual",
-    body: "El contenido que publicas (textos, fotos, descripciones) sigue siendo de tu propiedad. Sin embargo, al publicarlo en Bomell, nos otorgas una licencia no exclusiva, gratuita y mundial para mostrarlo, distribuirlo y promocionarlo dentro de la plataforma.\n\nLa marca Bomell, su logotipo, diseno y codigo son propiedad de sus creadores y estan protegidos. No esta permitido copiar, modificar ni distribuir ningun elemento de la aplicacion sin autorizacion.",
+    body: "El contenido que publicas (textos, fotos, descripciones) sigue siendo de tu propiedad. Sin embargo, al publicarlo en Bomelh, nos otorgas una licencia no exclusiva, gratuita y mundial para mostrarlo, distribuirlo y promocionarlo dentro de la plataforma.\n\nLa marca Bomelh, su logotipo, diseno y codigo son propiedad de sus creadores y estan protegidos. No esta permitido copiar, modificar ni distribuir ningun elemento de la aplicacion sin autorizacion.",
   },
   {
     title: "7. Proteccion de datos",
-    body: "Bomell recopila y trata los siguientes datos personales:\n\nNombre, email y foto de perfil (proporcionados por Google Sign-In).\nTelefono, ubicacion y biografia (proporcionados voluntariamente).\nAnuncios publicados, valoraciones y actividad dentro de la app.\n\nUsamos estos datos para el funcionamiento de la plataforma, la comunicacion con los usuarios y la mejora del servicio. No vendemos ni compartimos tus datos con terceros para fines comerciales.\n\nPuedes solicitar la eliminacion de tus datos eliminando tu cuenta desde la seccion Cuenta de tu perfil.",
+    body: "Bomelh recopila y trata los siguientes datos personales:\n\nNombre, email y foto de perfil (proporcionados por Google Sign-In).\nTelefono, ubicacion y biografia (proporcionados voluntariamente).\nAnuncios publicados, valoraciones y actividad dentro de la app.\n\nUsamos estos datos para el funcionamiento de la plataforma, la comunicacion con los usuarios y la mejora del servicio. No vendemos ni compartimos tus datos con terceros para fines comerciales.\n\nPuedes solicitar la eliminacion de tus datos eliminando tu cuenta desde la seccion Cuenta de tu perfil.",
   },
   {
     title: "8. Limitacion de responsabilidad",
-    body: 'Bomell se proporciona "tal cual", sin garantias de ningun tipo. No garantizamos:\n\nLa disponibilidad ininterrumpida del servicio.\nLa ausencia de errores o vulnerabilidades.\nLos resultados obtenidos mediante el uso de la plataforma.\n\nEn ningun caso Bomell sera responsable de danos directos, indirectos o consecuentes derivados del uso de la plataforma o de transacciones entre usuarios.',
+    body: 'Bomelh se proporciona "tal cual", sin garantias de ningun tipo. No garantizamos:\n\nLa disponibilidad ininterrumpida del servicio.\nLa ausencia de errores o vulnerabilidades.\nLos resultados obtenidos mediante el uso de la plataforma.\n\nEn ningun caso Bomelh sera responsable de danos directos, indirectos o consecuentes derivados del uso de la plataforma o de transacciones entre usuarios.',
   },
   {
     title: "9. Suspension y eliminacion de cuentas",
-    body: "Bomell se reserva el derecho de suspender o eliminar cuentas que:\n\nIncumplan estos Terminos y Condiciones.\nPubliquen contenido ilegal, fraudulento o danino.\nReciban multiples reportes de otros usuarios.\nRealicen un uso abusivo de la plataforma.\n\nLa eliminacion de una cuenta conlleva la eliminacion de todos los datos asociados: anuncios, valoraciones, seguidores y favoritos.",
+    body: "Bomelh se reserva el derecho de suspender o eliminar cuentas que:\n\nIncumplan estos Terminos y Condiciones.\nPubliquen contenido ilegal, fraudulento o danino.\nReciban multiples reportes de otros usuarios.\nRealicen un uso abusivo de la plataforma.\n\nLa eliminacion de una cuenta conlleva la eliminacion de todos los datos asociados: anuncios, valoraciones, seguidores y favoritos.",
   },
   {
     title: "10. Modificaciones",
-    body: "Bomell puede modificar estos Terminos y Condiciones en cualquier momento. Los cambios seran efectivos desde su publicacion en la aplicacion. El uso continuado de la plataforma despues de un cambio implica la aceptacion de los nuevos terminos.\n\nTe notificaremos de cambios importantes a traves de la aplicacion.",
+    body: "Bomelh puede modificar estos Terminos y Condiciones en cualquier momento. Los cambios seran efectivos desde su publicacion en la aplicacion. El uso continuado de la plataforma despues de un cambio implica la aceptacion de los nuevos terminos.\n\nTe notificaremos de cambios importantes a traves de la aplicacion.",
   },
   {
     title: "11. Contacto",

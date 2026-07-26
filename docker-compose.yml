@@ -1,0 +1,26 @@
+name: marketplace-frontend
+
+# Frontend service only — see the backend/infra composes for the rest of the
+# stack. NEXT_PUBLIC_* values were baked into the image at build time by CI,
+# so nothing app-specific is needed at runtime here.
+
+services:
+  frontend:
+    image: ghcr.io/ivanrenedo/anuncios-frontend:${TAG:-latest}
+    container_name: marketplace_frontend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      HOSTNAME: 0.0.0.0
+    networks:
+      - marketplace_net
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  marketplace_net:
+    external: true

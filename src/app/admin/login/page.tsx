@@ -46,7 +46,7 @@ export default function AdminLoginPage() {
         <div className="mb-8 flex flex-col items-center text-center">
           <BrandLogo size={64} showWordmark={false} />
           <h1 className="mt-4 text-3xl font-extrabold text-on-surface">
-            bomell<span style={{ color: "var(--color-primary)" }}>.</span>
+            bomelh<span style={{ color: "var(--color-primary)" }}>.</span>
           </h1>
           <p className="mt-1 text-muted">Panel de administración</p>
         </div>
@@ -64,7 +64,7 @@ export default function AdminLoginPage() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="admin@bomell.com"
+              placeholder="admin@bomelh.com"
               autoComplete="username"
               className="h-11 w-full rounded-xl border border-outline-variant/50 bg-surface-lowest px-4 text-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
             />

@@ -10,7 +10,7 @@ const manrope = Manrope({
 });
 
 export const metadata: Metadata = {
-  title: "Bomell — Comprar y vender en Guinea Ecuatorial",
+  title: "Bomelh — Comprar y vender en Guinea Ecuatorial",
   description:
     "El marketplace de Guinea Ecuatorial. Compra y vende moda, tecnología, coches, hogar y servicios cerca de ti.",
   icons: {
@@ -23,7 +23,7 @@ export const metadata: Metadata = {
   },
   themeColor: "#006b5e",
   openGraph: {
-    title: "Bomell — El marketplace de Guinea Ecuatorial",
+    title: "Bomelh — El marketplace de Guinea Ecuatorial",
     description:
       "Compra y vende cerca de ti, con vendedores verificados. Malabo, Bata y toda Guinea Ecuatorial.",
     images: [{ url: "/icon-512.png", width: 512, height: 512 }],

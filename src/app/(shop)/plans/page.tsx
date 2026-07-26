@@ -89,7 +89,7 @@ const WHATSAPP_NUMBER = "240222626418";
 
 function contactWhatsApp(plan: string) {
   const msg = encodeURIComponent(
-    `Hola, me gustaria contratar el plan ${plan} en Bomell. Como puedo activarlo?`,
+    `Hola, me gustaria contratar el plan ${plan} en Bomelh. Como puedo activarlo?`,
   );
   window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`, "_blank");
 }
@@ -322,7 +322,7 @@ export default function PlansPage() {
             <button
               onClick={() => {
                 const msg = encodeURIComponent(
-                  "Hola, quiero destacar un anuncio en Bomell durante 7 dias (1.000 XAF). Como procedo?",
+                  "Hola, quiero destacar un anuncio en Bomelh durante 7 dias (1.000 XAF). Como procedo?",
                 );
                 window.open(
                   `https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`,

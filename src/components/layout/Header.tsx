@@ -47,7 +47,7 @@ export default function Header() {
       {/* ── Main bar ─────────────────────────────────────────────── */}
       <div className="mx-auto flex h-14 max-w-7xl items-center gap-3 px-4 sm:h-16 sm:px-6">
         {/* Logo */}
-        <Link href="/" className="flex shrink-0 items-center" aria-label="Bomell — inicio">
+        <Link href="/" className="flex shrink-0 items-center" aria-label="Bomelh — inicio">
           {/* Wordmark hidden on mobile — mark alone reads clean at 36px */}
           <BrandLogo
             size={36}

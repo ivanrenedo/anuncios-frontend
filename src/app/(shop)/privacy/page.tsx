@@ -13,7 +13,7 @@ interface Section {
 const SECTIONS: Section[] = [
   {
     title: "1. Responsable del tratamiento",
-    body: "El responsable del tratamiento de tus datos personales es Bomell, plataforma de anuncios clasificados con actividad en Guinea Ecuatorial.\n\nPara cualquier consulta relacionada con tus datos, puedes contactarnos en soporte@marketeg.com.",
+    body: "El responsable del tratamiento de tus datos personales es Bomelh, plataforma de anuncios clasificados con actividad en Guinea Ecuatorial.\n\nPara cualquier consulta relacionada con tus datos, puedes contactarnos en soporte@marketeg.com.",
   },
   {
     title: "2. Datos que recopilamos",
@@ -41,15 +41,15 @@ const SECTIONS: Section[] = [
   },
   {
     title: "8. Cookies y tecnologias similares",
-    body: "Bomell utiliza almacenamiento local en el navegador (localStorage) para:\n\nMantener tu sesion iniciada.\nGuardar tus preferencias (tema, idioma, notificaciones).\nAlmacenar datos de perfil en cache para un acceso mas rapido.\n\nEstos datos se almacenan unicamente en tu navegador y se eliminan al cerrar sesion.",
+    body: "Bomelh utiliza almacenamiento local en el navegador (localStorage) para:\n\nMantener tu sesion iniciada.\nGuardar tus preferencias (tema, idioma, notificaciones).\nAlmacenar datos de perfil en cache para un acceso mas rapido.\n\nEstos datos se almacenan unicamente en tu navegador y se eliminan al cerrar sesion.",
   },
   {
     title: "9. Menores de edad",
-    body: "Bomell no esta dirigido a menores de 18 anos. No recopilamos intencionadamente datos de menores. Si detectamos que un menor se ha registrado, eliminaremos su cuenta y datos asociados.",
+    body: "Bomelh no esta dirigido a menores de 18 anos. No recopilamos intencionadamente datos de menores. Si detectamos que un menor se ha registrado, eliminaremos su cuenta y datos asociados.",
   },
   {
     title: "10. Modificaciones",
-    body: "Podemos actualizar esta Politica de Privacidad para reflejar cambios en nuestras practicas o en la legislacion aplicable. Los cambios seran efectivos desde su publicacion en la aplicacion.\n\nTe notificaremos de cambios significativos a traves de la app. El uso continuado de Bomell despues de una actualizacion implica la aceptacion de la nueva politica.",
+    body: "Podemos actualizar esta Politica de Privacidad para reflejar cambios en nuestras practicas o en la legislacion aplicable. Los cambios seran efectivos desde su publicacion en la aplicacion.\n\nTe notificaremos de cambios significativos a traves de la app. El uso continuado de Bomelh despues de una actualizacion implica la aceptacion de la nueva politica.",
   },
   {
     title: "11. Contacto",

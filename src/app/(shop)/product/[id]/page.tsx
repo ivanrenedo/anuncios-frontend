@@ -207,7 +207,7 @@ export default function ProductDetailPage({
       navigator
         .share({
           title: product.title,
-          text: `Mira este anuncio en Bomell: ${product.title}`,
+          text: `Mira este anuncio en Bomelh: ${product.title}`,
           url: typeof window !== "undefined" ? window.location.href : "",
         })
         .catch(() => {});
@@ -229,7 +229,7 @@ export default function ProductDetailPage({
 
     if (type === "whatsapp") {
       const msg = encodeURIComponent(
-        `Hola, vi tu anuncio "${product.title}" en Bomell`
+        `Hola, vi tu anuncio "${product.title}" en Bomelh`
       );
       window.open(`https://wa.me/${sellerPhone}?text=${msg}`, "_blank");
     } else {

@@ -5,7 +5,7 @@ interface BrandLogoProps {
 }
 
 /**
- * Bomell brand mark + wordmark. Colors come from theme tokens
+ * Bomelh brand mark + wordmark. Colors come from theme tokens
  * (--color-primary / --color-on-primary / --color-on-surface),
  * so light/dark switch happens automatically.
  */
@@ -20,7 +20,7 @@ export default function BrandLogo({
         width={size}
         height={size}
         viewBox="0 0 240 240"
-        aria-label="Bomell"
+        aria-label="Bomelh"
         role="img"
       >
         <rect
@@ -45,7 +45,7 @@ export default function BrandLogo({
       </svg>
       {showWordmark && (
         <span className={wordmarkClassName}>
-          bomell<span style={{ color: "var(--color-primary)" }}>.</span>
+          bomelh<span style={{ color: "var(--color-primary)" }}>.</span>
         </span>
       )}
     </div>

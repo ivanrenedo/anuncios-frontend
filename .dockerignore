@@ -1,0 +1,30 @@
+# Dependency and build outputs — regenerated inside the image.
+node_modules
+.next
+out
+coverage
+
+# Local dev artifacts.
+.git
+.gitignore
+.github
+.vscode
+.idea
+.editorconfig
+.eslintcache
+tsconfig.tsbuildinfo
+
+# Secrets — must never end up in the image.
+.env
+.env.*
+!.env.example
+
+# Docs & IDE noise.
+README.md
+CHANGELOG.md
+LICENSE
+*.md
+
+# Docker itself.
+Dockerfile
+.dockerignore

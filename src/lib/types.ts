@@ -14,6 +14,8 @@ export interface ProductImage {
   id: string;
   url: string;
   sortOrder?: number;
+  type?: 'image' | 'video';
+  thumbnailUrl?: string | null;
 }
 
 export interface Category {
@@ -28,6 +30,7 @@ export interface Category {
 export interface MarketplaceDetail {
   brand?: string | null;
   model?: string | null;
+  colors?: string[];
 }
 
 export interface VehicleDetail {
@@ -39,6 +42,7 @@ export interface VehicleDetail {
   kilometrage?: number | null;
   transmission?: string | null;
   engine?: string | null;
+  colors?: string[];
 }
 
 export interface PropertyDetail {

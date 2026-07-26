@@ -10,7 +10,7 @@ export default function Footer() {
               M
             </span>
             <span className="text-lg font-extrabold tracking-tight">
-              Bomell
+              Bomelh
             </span>
           </div>
           <p className="mt-3 max-w-xs text-sm text-muted">
@@ -50,7 +50,7 @@ export default function Footer() {
         </div>
       </div>
       <div className="border-t border-outline-variant/40 py-5 text-center text-xs text-muted">
-        © {new Date().getFullYear()} Bomell · Guinea Ecuatorial
+        © {new Date().getFullYear()} Bomelh · Guinea Ecuatorial
       </div>
     </footer>
   );
