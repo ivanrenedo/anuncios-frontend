@@ -17,6 +17,7 @@ import {
   ArrowLeft,
   Users,
   Package,
+  Share2,
 } from "lucide-react";
 import {
   GET_USER,
@@ -129,6 +130,22 @@ export default function PublicUserProfile() {
       return;
     }
     setReportOpen(true);
+  };
+
+  const onShare = () => {
+    if (typeof window === "undefined") return;
+    const url = window.location.href;
+    if (navigator.share) {
+      navigator
+        .share({
+          title: `${user?.name ?? "Perfil"} en Bomelh`,
+          text: `Mira el perfil de ${user?.name ?? "este vendedor"} en Bomelh`,
+          url,
+        })
+        .catch(() => {});
+    } else {
+      navigator.clipboard?.writeText(url).catch(() => {});
+    }
   };
 
   if (loading && !user) {
@@ -250,27 +267,36 @@ export default function PublicUserProfile() {
           </div>
 
           {/* Actions */}
-          {!isOwn && (
-            <div className="flex gap-2">
-              <button
-                onClick={onToggleFollow}
-                className={`flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-bold transition ${
-                  following
-                    ? "bg-surface-container text-on-surface hover:bg-surface-high"
-                    : "bg-primary text-on-primary hover:bg-primary/90"
-                }`}
-              >
-                {following ? <UserCheck size={16} /> : <UserPlus size={16} />}
-                {following ? "Siguiendo" : "Seguir"}
-              </button>
-              <button
-                onClick={onReport}
-                className="flex items-center gap-1.5 rounded-lg bg-danger-soft px-4 py-2 text-sm font-bold text-danger transition hover:opacity-80"
-              >
-                <Flag size={16} /> Reportar
-              </button>
-            </div>
-          )}
+          <div className="flex gap-2">
+            {!isOwn && (
+              <>
+                <button
+                  onClick={onToggleFollow}
+                  className={`flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-bold transition ${
+                    following
+                      ? "bg-surface-container text-on-surface hover:bg-surface-high"
+                      : "bg-primary text-on-primary hover:bg-primary/90"
+                  }`}
+                >
+                  {following ? <UserCheck size={16} /> : <UserPlus size={16} />}
+                  {following ? "Siguiendo" : "Seguir"}
+                </button>
+                <button
+                  onClick={onReport}
+                  className="flex items-center gap-1.5 rounded-lg bg-danger-soft px-4 py-2 text-sm font-bold text-danger transition hover:opacity-80"
+                >
+                  <Flag size={16} /> Reportar
+                </button>
+              </>
+            )}
+            <button
+              onClick={onShare}
+              aria-label="Compartir perfil"
+              className="flex items-center justify-center rounded-lg bg-surface-container px-3 py-2 text-on-surface transition hover:bg-surface-high"
+            >
+              <Share2 size={16} />
+            </button>
+          </div>
         </div>
       </div>
 

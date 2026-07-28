@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.guslift.com",
+      "sha256_cert_fingerprints": [
+        "BA:AE:BD:4A:3F:0E:09:DF:40:CF:92:CE:FE:D2:5D:B5:D3:D0:B3:8B:4D:ED:C0:9A:CB:37:A8:72:BD:81:AB:5B"
+      ]
+    }
+  }
+]
