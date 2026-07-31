@@ -100,6 +100,7 @@ export const GET_USERS = gql`
       planExpiresAt
       suspended
       suspendedReason
+      isBusiness
     }
   }
 `;

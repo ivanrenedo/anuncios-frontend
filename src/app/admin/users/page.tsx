@@ -46,6 +46,7 @@ interface User {
   permission?: string;
   suspended?: boolean;
   suspendedReason?: string | null;
+  isBusiness?: boolean;
   createdAt?: string;
 }
 
@@ -61,6 +62,7 @@ const EMPTY_FORM = {
   rolId: "",
   verified: false,
   permission: "DENIED",
+  isBusiness: false,
 };
 
 const PAGE_SIZE = 50;
@@ -136,6 +138,7 @@ export default function AdminUsers() {
       rolId: u.rolId ?? "",
       verified: !!u.verified,
       permission: u.permission ?? "DENIED",
+      isBusiness: !!u.isBusiness,
     });
     setError("");
     setShowForm(true);
@@ -159,6 +162,7 @@ export default function AdminUsers() {
               rolId: form.rolId || "",
               verified: form.verified,
               permission: form.permission,
+              isBusiness: form.isBusiness,
             },
           },
         });
@@ -575,6 +579,12 @@ export default function AdminUsers() {
                   onChange={(v) =>
                     setForm({ ...form, permission: v ? "GRANTED" : "DENIED" })
                   }
+                />
+                <ToggleRow
+                  label="Cuenta de negocio"
+                  description="Su teléfono y email se usan como contacto oficial en la app móvil (planes, boosts, ayuda). Solo un usuario puede tener este rol a la vez."
+                  checked={form.isBusiness}
+                  onChange={(v) => setForm({ ...form, isBusiness: v })}
                 />
               </div>
             </div>

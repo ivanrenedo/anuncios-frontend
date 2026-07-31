@@ -25,6 +25,7 @@ export default function AdminLoginPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, pin }),
       });
+      
       const data = await res.json();
       if (!res.ok) {
         setError(data.error || "No se pudo iniciar sesión");

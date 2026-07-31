@@ -30,7 +30,7 @@ export async function POST(req: Request) {
   if (!email || !pin) {
     return NextResponse.json(
       { error: "Email y PIN son obligatorios" },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
@@ -56,7 +56,7 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json(
       { error: "No se pudo contactar con el servidor" },
-      { status: 502 }
+      { status: 502 },
     );
   }
 }

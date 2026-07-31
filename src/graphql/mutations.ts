@@ -83,7 +83,7 @@ export const CREATE_USER = gql`
 export const ADMIN_UPDATE_USER = gql`
   mutation AdminUpdateUser($id: String!, $input: AdminUpdateUserInput!) {
     adminUpdateUser(id: $id, input: $input) {
-      id name email location verified rolId permission
+      id name email location verified rolId permission isBusiness
     }
   }
 `;

@@ -14,7 +14,7 @@ async function fetchProduct(id: string) {
             id title description price discount city
             seller{ name }
             category{ label }
-            images{ url }
+            images{ url thumbnailUrl }
           }
         }`,
         variables: { id },
@@ -53,12 +53,14 @@ export async function generateMetadata({
     : product.title;
   const description = priceText ? `${priceText} — ${desc}` : desc;
 
-  const rawImage = product.images?.[0]?.url as string | undefined;
-  const image = rawImage
-    ? rawImage.startsWith("/")
-      ? `${API_URL}${rawImage}`
-      : rawImage
-    : undefined;
+  // WhatsApp mobile caps preview images ~600 KB and drops the thumbnail if
+  // the fetch is slow or too heavy — the original product photo is often
+  // 2-5 MB. Prefer the server-generated `thumbnailUrl`; only fall back to
+  // the full-res image if the thumbnail is missing (older uploads).
+  const first = product.images?.[0];
+  const absolute = (u?: string | null) =>
+    u ? (u.startsWith("/") ? `${API_URL}${u}` : u) : undefined;
+  const image = absolute(first?.thumbnailUrl) ?? absolute(first?.url);
 
   return {
     title: `${product.title} — Bomelh`,
