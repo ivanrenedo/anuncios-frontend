@@ -13,9 +13,7 @@ export const TOKEN_KEY = "market_token";
 export const ADMIN_TOKEN_KEY = "market_admin_token";
 
 /** Google OAuth Web Client ID (same one the mobile app uses). */
-export const GOOGLE_CLIENT_ID =
-  process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ||
-  "962502086719-5fvrdle768s2s9h3ivflrg6qqj3880ob.apps.googleusercontent.com";
+export const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
 
 /** Resolve a possibly-relative image URL coming from the backend. */
 export function resolveImage(url?: string | null): string {
