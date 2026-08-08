@@ -1,6 +1,13 @@
+"use client";
+
 import Link from "next/link";
 
 export default function Footer() {
+  const openCookieSettings = () => {
+    if (typeof window === "undefined") return;
+    window.dispatchEvent(new CustomEvent("bomelh:open-cookie-settings"));
+  };
+
   return (
     <footer className="mt-16 hidden border-t border-outline-variant/40 bg-surface-lowest sm:block">
       <div className="mx-auto grid max-w-7xl grid-cols-2 gap-8 px-6 py-12 md:grid-cols-4">
@@ -30,22 +37,21 @@ export default function Footer() {
         </div>
 
         <div>
-          <h4 className="text-sm font-bold text-on-surface">Cuenta</h4>
-          <ul className="mt-3 space-y-2 text-sm text-muted">
-            <li><Link href="/post" className="hover:text-primary">Vender</Link></li>
-            <li><Link href="/profile" className="hover:text-primary">Mi perfil</Link></li>
-            <li><Link href="/login" className="hover:text-primary">Iniciar sesión</Link></li>
-            <li><Link href="/admin" className="hover:text-primary">Panel admin</Link></li>
-          </ul>
-        </div>
-
-        <div>
           <h4 className="text-sm font-bold text-on-surface">Información</h4>
           <ul className="mt-3 space-y-2 text-sm text-muted">
             <li><Link href="/plans" className="hover:text-primary">Planes</Link></li>
-            <li><Link href="/help" className="hover:text-primary">Ayuda</Link></li>
-            <li><Link href="/terms" className="hover:text-primary">Términos</Link></li>
-            <li><Link href="/privacy" className="hover:text-primary">Privacidad</Link></li>
+            <li><Link href="/help" className="hover:text-primary">Centro de ayuda</Link></li>
+            <li><Link href="/terms" className="hover:text-primary">Términos y condiciones</Link></li>
+            <li><Link href="/privacy" className="hover:text-primary">Política de privacidad</Link></li>
+            <li>
+              <button
+                type="button"
+                onClick={openCookieSettings}
+                className="text-left hover:text-primary"
+              >
+                Preferencias de cookies
+              </button>
+            </li>
           </ul>
         </div>
       </div>

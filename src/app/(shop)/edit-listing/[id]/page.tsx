@@ -64,6 +64,9 @@ function prefillForm(product: Product): Record<string, any> {
   if (product.marketplaceDetail) {
     form.brand = product.marketplaceDetail.brand || "";
     form.model = product.marketplaceDetail.model || "";
+    form.colors = Array.isArray((product.marketplaceDetail as any).colors)
+      ? [...(product.marketplaceDetail as any).colors]
+      : [];
   }
   if (product.vehicleDetail) {
     const v = product.vehicleDetail;
@@ -74,6 +77,7 @@ function prefillForm(product: Product): Record<string, any> {
     form.kilometrage = v.kilometrage?.toString() || "";
     form.transmission = v.transmission || "";
     form.engine = v.engine || "";
+    form.colors = Array.isArray((v as any).colors) ? [...(v as any).colors] : [];
   }
   if (product.propertyDetail) {
     const p = product.propertyDetail;
@@ -199,8 +203,20 @@ export default function EditListingPage({ params }: { params: Promise<{ id: stri
         imageUrls: allImages,
       };
 
-      if (kind === "MarketPlace" && (form.brand || form.model)) {
-        input.marketplaceDetail = { brand: form.brand || undefined, model: form.model || undefined };
+      const colorsArr: string[] | undefined =
+        Array.isArray(form.colors) && form.colors.length > 0
+          ? form.colors
+          : undefined;
+
+      if (
+        kind === "MarketPlace" &&
+        (form.brand || form.model || colorsArr)
+      ) {
+        input.marketplaceDetail = {
+          brand: form.brand || undefined,
+          model: form.model || undefined,
+          colors: colorsArr,
+        };
       } else if (kind === "vehiculos") {
         input.vehicleDetail = {
           operation: form.operation || undefined,
@@ -210,6 +226,7 @@ export default function EditListingPage({ params }: { params: Promise<{ id: stri
           kilometrage: form.kilometrage ? parseInt(form.kilometrage) : undefined,
           transmission: form.transmission || undefined,
           engine: form.engine || undefined,
+          colors: colorsArr,
         };
       } else if (kind === "inmobiliaria") {
         input.propertyDetail = {
@@ -330,28 +347,30 @@ export default function EditListingPage({ params }: { params: Promise<{ id: stri
             className="mt-1 w-full rounded-xl border border-outline-variant/30 bg-surface-lowest px-4 py-3 text-sm outline-none transition focus:border-primary resize-none"
           />
         </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="text-sm font-bold text-on-surface">Precio (XAF)</label>
-            <input
-              type="number"
-              value={form.price || ""}
-              onChange={(e) => setField("price", e.target.value)}
-              className="mt-1 w-full rounded-xl border border-outline-variant/30 bg-surface-lowest px-4 py-3 text-sm outline-none transition focus:border-primary"
-            />
+        {kind !== "empleo" && (
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-sm font-bold text-on-surface">Precio (XAF)</label>
+              <input
+                type="number"
+                value={form.price || ""}
+                onChange={(e) => setField("price", e.target.value)}
+                className="mt-1 w-full rounded-xl border border-outline-variant/30 bg-surface-lowest px-4 py-3 text-sm outline-none transition focus:border-primary"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-bold text-on-surface">Descuento %</label>
+              <input
+                type="number"
+                min={0}
+                max={99}
+                value={form.discount || ""}
+                onChange={(e) => setField("discount", e.target.value)}
+                className="mt-1 w-full rounded-xl border border-outline-variant/30 bg-surface-lowest px-4 py-3 text-sm outline-none transition focus:border-primary"
+              />
+            </div>
           </div>
-          <div>
-            <label className="text-sm font-bold text-on-surface">Descuento %</label>
-            <input
-              type="number"
-              min={0}
-              max={99}
-              value={form.discount || ""}
-              onChange={(e) => setField("discount", e.target.value)}
-              className="mt-1 w-full rounded-xl border border-outline-variant/30 bg-surface-lowest px-4 py-3 text-sm outline-none transition focus:border-primary"
-            />
-          </div>
-        </div>
+        )}
         <div>
           <label className="text-sm font-bold text-on-surface">Ciudad</label>
           <input
@@ -402,6 +421,18 @@ export default function EditListingPage({ params }: { params: Promise<{ id: stri
               />
             </div>
           </div>
+        )}
+
+        {(kind === "MarketPlace" || kind === "vehiculos") && (
+          <ColorsField
+            colors={Array.isArray(form.colors) ? form.colors : []}
+            onChange={(next) => setField("colors", next)}
+            hint={
+              kind === "vehiculos"
+                ? "Añade los colores del vehículo (carrocería, tapicería…)."
+                : undefined
+            }
+          />
         )}
 
         {kind === "vehiculos" && (
@@ -608,6 +639,117 @@ export default function EditListingPage({ params }: { params: Promise<{ id: stri
           )}
         </button>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Multi-color picker used by MarketPlace + Vehículos (mirror of the helper
+ * in `/post/page.tsx`). Stores hex strings; native color input + manual hex
+ * entry + removable chips. Uppercase hex kept for equality with what the
+ * publish flow writes.
+ */
+function ColorsField({
+  colors,
+  onChange,
+  hint,
+}: {
+  colors: string[];
+  onChange: (next: string[]) => void;
+  hint?: string;
+}) {
+  const [draft, setDraft] = useState<string>("#000000");
+  const [hexInput, setHexInput] = useState<string>("");
+
+  const add = (raw: string) => {
+    const withHash = raw.startsWith("#") ? raw : `#${raw}`;
+    if (!/^#[0-9a-fA-F]{6}$/.test(withHash)) return;
+    const upper = withHash.toUpperCase();
+    if (colors.includes(upper)) return;
+    onChange([...colors, upper]);
+    setHexInput("");
+  };
+
+  const remove = (idx: number) => {
+    onChange(colors.filter((_, i) => i !== idx));
+  };
+
+  return (
+    <div>
+      <label className="text-sm font-bold text-on-surface">Colores</label>
+
+      {colors.length > 0 && (
+        <div className="mt-2 flex flex-wrap gap-2">
+          {colors.map((c, i) => (
+            <span
+              key={`${c}-${i}`}
+              className="inline-flex items-center gap-2 rounded-full border border-outline-variant/40 bg-surface-lowest py-1 pl-1.5 pr-2 text-xs font-semibold text-on-surface"
+            >
+              <span
+                className="h-5 w-5 rounded-full border border-black/10"
+                style={{ backgroundColor: c }}
+                aria-hidden
+              />
+              <span className="tabular-nums">{c}</span>
+              <button
+                type="button"
+                onClick={() => remove(i)}
+                aria-label={`Quitar ${c}`}
+                className="grid h-4 w-4 place-items-center rounded-full text-muted transition hover:bg-danger/15 hover:text-danger"
+              >
+                ×
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+
+      <div className="mt-2 flex flex-wrap items-center gap-3">
+        <label className="relative inline-flex h-10 w-14 cursor-pointer overflow-hidden rounded-lg border border-outline-variant/40">
+          <input
+            type="color"
+            value={draft}
+            onChange={(ev) => setDraft(ev.target.value)}
+            className="absolute inset-0 h-full w-full cursor-pointer border-0 p-0"
+            aria-label="Selector de color"
+          />
+        </label>
+        <button
+          type="button"
+          onClick={() => add(draft)}
+          className="rounded-lg bg-primary/10 px-3 py-2 text-xs font-bold text-primary transition hover:bg-primary/20"
+        >
+          + Añadir color
+        </button>
+
+        <div className="flex items-center gap-2">
+          <input
+            value={hexInput}
+            onChange={(ev) => setHexInput(ev.target.value.toUpperCase())}
+            onKeyDown={(ev) => {
+              if (ev.key === "Enter") {
+                ev.preventDefault();
+                add(hexInput);
+              }
+            }}
+            placeholder="#RRGGBB"
+            maxLength={7}
+            className="w-24 rounded-lg border border-outline-variant/40 bg-surface-lowest px-2 py-2 text-xs font-semibold uppercase tabular-nums outline-none focus:border-primary"
+          />
+          <button
+            type="button"
+            onClick={() => add(hexInput)}
+            className="rounded-lg bg-surface-container px-3 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-high"
+          >
+            Añadir
+          </button>
+        </div>
+      </div>
+
+      <p className="mt-1.5 text-[11px] text-muted">
+        {hint ??
+          "Puedes añadir varios colores. Ayuda a los compradores a encontrar tu anuncio."}
+      </p>
     </div>
   );
 }

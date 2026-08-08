@@ -1,145 +1,250 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import Link from "next/link";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { resolveImage } from "@/lib/config";
 import type { HomeSection } from "@/hooks/useHomeSections";
 
+/** Shape de un slide tal y como lo devuelve el panel admin (`section.config.slides`). */
 interface Slide {
   id: string;
+  badge: string;
+  badgeColor: string;
   title: string;
   subtitle: string;
-  cta: string;
-  href: string;
-  from: string;
-  to: string;
-  image?: string;
+  buttonLabel: string;
+  buttonTextColor: string;
+  image: string;
+  linkType?: "none" | "product" | "category" | "url";
+  linkValue?: string;
 }
 
-/** Convert a backend banner-type HomeSection into a Slide. */
-function sectionToSlide(section: HomeSection): Slide {
-  const config = section.config ?? {};
-  return {
-    id: section.id,
-    title: section.title || "Oferta especial",
-    subtitle: section.subtitle || "",
-    cta: config.buttonLabel || "Ver mas",
-    href: config.href || "/explore",
-    from: config.from || "#006b5e",
-    to: config.to || "#13c1ac",
-    image: config.image || undefined,
-  };
-}
+const AUTOPLAY_MS = 2000;
 
 interface PromoCarouselProps {
+  /** Múltiples secciones tipo `banner`. Cada una se renderiza como su propio
+   *  carrusel con los slides que trae `section.config.slides`. */
   sections?: HomeSection[];
+  /** Callback opcional para que el padre registre `click` cuando el usuario
+   *  interactúa con un slide (impresión ya se hace a nivel de sección). */
+  onSlidePress?: (sectionId: string) => void;
 }
 
 /**
- * Backend-driven banner carousel. Renders nothing when there are no
- * banner sections — no hardcoded placeholder content.
+ * Banner controlado desde el panel admin. Réplica del PromoCarousel móvil:
+ * scroll horizontal con snap por slide, autoplay pausable y navegación a
+ * producto / categoría / URL según `linkType`. NO inventa contenido — si
+ * la sección no trae slides, no renderiza.
  */
-export default function PromoCarousel({ sections }: PromoCarouselProps) {
-  const bannerSections = sections?.filter((s) => s.type === "banner") ?? [];
-  const slides: Slide[] = bannerSections.map(sectionToSlide);
-
-  const [i, setI] = useState(0);
-  const [paused, setPaused] = useState(false);
-
-  const next = useCallback(
-    () => setI((v) => (v + 1) % Math.max(slides.length, 1)),
-    [slides.length],
-  );
-  const prev = useCallback(
-    () => setI((v) => (v - 1 + slides.length) % Math.max(slides.length, 1)),
-    [slides.length],
-  );
-
-  useEffect(() => {
-    if (paused || slides.length < 2) return;
-    const t = setInterval(next, 5000);
-    return () => clearInterval(t);
-  }, [paused, next, slides.length]);
-
-  if (slides.length === 0) return null;
-
-  const s = slides[Math.min(i, slides.length - 1)];
+export default function PromoCarousel({ sections, onSlidePress }: PromoCarouselProps) {
+  const banners = (sections ?? []).filter((s) => s.type === "banner");
+  if (banners.length === 0) return null;
 
   return (
-    <div
-      className="px-4 pt-4 sm:px-6"
-      onMouseEnter={() => setPaused(true)}
-      onMouseLeave={() => setPaused(false)}
-    >
-      <div
-        className="group relative overflow-hidden rounded-2xl transition-[background] duration-700"
-        style={{
-          backgroundImage: `linear-gradient(120deg, ${s.from}, ${s.to})`,
-        }}
-      >
-        {/* Background image (only when the section provides one) */}
-        {s.image && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            key={s.id}
-            src={s.image}
-            alt=""
-            className="absolute inset-0 h-full w-full object-cover opacity-25 transition-opacity duration-700"
+    <div className="space-y-6">
+      {banners.map((section) => {
+        const slides = (section.config?.slides as Slide[] | undefined) ?? [];
+        if (slides.length === 0) return null;
+        return (
+          <BannerCarousel
+            key={section.id}
+            slides={slides}
+            onSlidePress={() => onSlidePress?.(section.id)}
           />
-        )}
+        );
+      })}
+    </div>
+  );
+}
 
-        {/* Content */}
-        <div className="relative flex flex-col gap-3 px-6 py-8 sm:px-10 sm:py-14">
-          <h2 className="max-w-md whitespace-pre-line text-2xl font-extrabold leading-tight text-white sm:text-4xl">
-            {s.title}
-          </h2>
-          {s.subtitle && (
-            <p className="text-sm text-white/85 sm:text-base">{s.subtitle}</p>
-          )}
-          <Link
-            href={s.href}
-            className="mt-2 inline-flex w-fit rounded-lg bg-white px-5 py-2.5 text-sm font-bold text-on-surface shadow-soft transition hover:bg-white/90"
+function BannerCarousel({
+  slides,
+  onSlidePress,
+}: {
+  slides: Slide[];
+  onSlidePress?: () => void;
+}) {
+  const router = useRouter();
+  const trackRef = useRef<HTMLDivElement | null>(null);
+  const pausedRef = useRef(false);
+  const animRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [active, setActive] = useState(0);
+
+  // Animación de scroll horizontal con setTimeout + easeOutCubic. Notas:
+  //  - `scroll-behavior: smooth` nativo (CSS o scrollTo) es no-op en algunos
+  //    runtimes embebidos (Electron/WebViews) — animamos a mano.
+  //  - rAF se congela cuando la pestaña no es visible; setTimeout se clamp-ea
+  //    a ~1s en background pero sigue disparando, así el autoplay no se rompe
+  //    al volver a la pestaña.
+  //  - `scroll-snap-type: mandatory` rechaza escrituras intermedias porque
+  //    no caen sobre snap points; deshabilitamos el snap durante la animación
+  //    y lo restauramos al terminar (el usuario sigue notando snap al deslizar).
+  const smoothScrollTo = (track: HTMLElement, target: number, ms = 500) => {
+    if (animRef.current !== null) clearTimeout(animRef.current);
+    const start = track.scrollLeft;
+    const delta = target - start;
+    if (Math.abs(delta) < 1) return;
+    const prevSnap = track.style.scrollSnapType;
+    track.style.scrollSnapType = "none";
+    const t0 = Date.now();
+    const stepMs = 16;
+    const step = () => {
+      const p = Math.min(1, (Date.now() - t0) / ms);
+      const eased = 1 - Math.pow(1 - p, 3);
+      track.scrollLeft = start + delta * eased;
+      if (p < 1) {
+        animRef.current = setTimeout(step, stepMs);
+      } else {
+        animRef.current = null;
+        track.style.scrollSnapType = prevSnap;
+      }
+    };
+    step();
+  };
+
+  // Autoplay: cada `AUTOPLAY_MS` avanza un slide; al final vuelve al inicio.
+  // Se pausa mientras el pointer está dentro (hover / touch).
+  useEffect(() => {
+    if (slides.length < 2) return;
+    const id = setInterval(() => {
+      if (pausedRef.current) return;
+      const track = trackRef.current;
+      if (!track) return;
+      const first = track.querySelector<HTMLElement>(":scope > *");
+      if (!first) return;
+      const pitch = first.getBoundingClientRect().width + 16; // gap = 16px
+      const max = track.scrollWidth - track.clientWidth;
+      if (max <= 0) return;
+      // Comprobamos la posición ACTUAL: con slides a w-full, pitch ≈ max, así
+      // que preguntar por next siempre desborda y el carrusel se quedaba en 0.
+      const target = track.scrollLeft >= max - 4
+        ? 0
+        : Math.min(track.scrollLeft + pitch, max);
+      smoothScrollTo(track, target);
+    }, AUTOPLAY_MS);
+    return () => {
+      clearInterval(id);
+      if (animRef.current !== null) clearTimeout(animRef.current);
+    };
+  }, [slides.length]);
+
+  // Sincroniza el dot activo con el scroll manual (o del autoplay).
+  const onScroll = () => {
+    const track = trackRef.current;
+    if (!track) return;
+    const first = track.querySelector<HTMLElement>(":scope > *");
+    if (!first) return;
+    const pitch = first.getBoundingClientRect().width + 16;
+    const i = Math.round(track.scrollLeft / pitch);
+    if (i !== active) setActive(Math.max(0, Math.min(slides.length - 1, i)));
+  };
+
+  const handleSlidePress = (slide: Slide) => {
+    const value = slide.linkValue?.trim();
+    if (!value || slide.linkType === "none" || !slide.linkType) return;
+    onSlidePress?.();
+    switch (slide.linkType) {
+      case "product":
+        router.push(`/product/${value}`);
+        break;
+      case "category":
+        router.push(`/explore?filterCat=${encodeURIComponent(value)}`);
+        break;
+      case "url":
+        window.open(value, "_blank", "noopener,noreferrer");
+        break;
+    }
+  };
+
+  return (
+    <div className="px-0">
+      <div
+        ref={trackRef}
+        onScroll={onScroll}
+        onPointerEnter={() => (pausedRef.current = true)}
+        onPointerLeave={() => (pausedRef.current = false)}
+        onTouchStart={() => (pausedRef.current = true)}
+        onTouchEnd={() => (pausedRef.current = false)}
+        className="flex snap-x snap-mandatory gap-4 overflow-x-auto scrollbar-hide"
+      >
+        {slides.map((slide) => (
+          <div
+            key={slide.id}
+            className="relative h-56 w-full shrink-0 snap-center overflow-hidden rounded-2xl bg-[#0d0f12] sm:h-64"
           >
-            {s.cta}
-          </Link>
-        </div>
-
-        {/* Left/Right arrows (desktop hover) */}
-        {slides.length > 1 && (
-          <>
-            <button
-              onClick={prev}
-              aria-label="Anterior"
-              className="absolute left-3 top-1/2 hidden h-9 w-9 -translate-y-1/2 place-items-center rounded-full bg-white/20 text-white backdrop-blur transition hover:bg-white/40 group-hover:grid"
-            >
-              <ChevronLeft size={20} />
-            </button>
-            <button
-              onClick={next}
-              aria-label="Siguiente"
-              className="absolute right-3 top-1/2 hidden h-9 w-9 -translate-y-1/2 place-items-center rounded-full bg-white/20 text-white backdrop-blur transition hover:bg-white/40 group-hover:grid"
-            >
-              <ChevronRight size={20} />
-            </button>
-          </>
-        )}
-
-        {/* Dots */}
-        {slides.length > 1 && (
-          <div className="absolute bottom-4 left-6 flex gap-1.5 sm:left-10">
-            {slides.map((_, idx) => (
-              <button
-                key={idx}
-                onClick={() => setI(idx)}
-                aria-label={`Slide ${idx + 1}`}
-                className={`h-1.5 rounded-full transition-all ${
-                  idx === i ? "w-6 bg-white" : "w-1.5 bg-white/50"
-                }`}
+            {slide.image && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={resolveImage(slide.image)}
+                alt=""
+                className="absolute inset-0 h-full w-full object-cover"
               />
-            ))}
+            )}
+            {/* Overlay para que el texto sea legible sobre la imagen. */}
+            <div
+              className="absolute inset-0"
+              style={{
+                background:
+                  "linear-gradient(90deg, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.15) 60%, rgba(0,0,0,0) 100%)",
+              }}
+            />
+            <div className="relative flex h-full flex-col justify-center gap-2 p-6 sm:p-8">
+              {slide.badge && (
+                <span
+                  className="inline-flex w-fit rounded px-2 py-1 text-[10px] font-extrabold uppercase tracking-widest text-white"
+                  style={{ backgroundColor: slide.badgeColor }}
+                >
+                  {slide.badge}
+                </span>
+              )}
+              <h2 className="max-w-md text-2xl font-extrabold leading-tight text-white sm:text-3xl">
+                {slide.title}
+              </h2>
+              {slide.subtitle && (
+                <p className="max-w-md text-sm text-white/90 sm:text-base">
+                  {slide.subtitle}
+                </p>
+              )}
+              {slide.buttonLabel && slide.buttonLabel.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => handleSlidePress(slide)}
+                  className="mt-1 w-fit rounded-xl bg-white px-5 py-2 text-sm font-semibold shadow-soft transition hover:bg-white/90"
+                  style={{ color: slide.buttonTextColor || "#0d0f12" }}
+                >
+                  {slide.buttonLabel}
+                </button>
+              )}
+            </div>
           </div>
-        )}
+        ))}
       </div>
+
+      {/* Dots — el activo se agranda como en móvil. */}
+      {slides.length > 1 && (
+        <div className="mt-3.5 flex h-2 items-center justify-center gap-1.5">
+          {slides.map((_, i) => (
+            <button
+              key={i}
+              type="button"
+              onClick={() => {
+                const track = trackRef.current;
+                if (!track) return;
+                const first = track.querySelector<HTMLElement>(":scope > *");
+                if (!first) return;
+                const pitch = first.getBoundingClientRect().width + 16;
+                track.scrollTo({ left: i * pitch, behavior: "smooth" });
+              }}
+              aria-label={`Ir al slide ${i + 1}${i === active ? ", activo" : ""}`}
+              className={`h-1.5 rounded-full transition-all ${
+                i === active
+                  ? "w-6 bg-primary"
+                  : "w-1.5 bg-outline-variant/70"
+              }`}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

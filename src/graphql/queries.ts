@@ -308,7 +308,7 @@ export const SEARCH_PRODUCTS = gql`
   query SearchProducts($input: SearchProductsInput!) {
     searchProducts(input: $input) {
       ${PRODUCT_CARD_FIELDS}
-      propertyDetail { operation }
+      propertyDetail { operation bedrooms bathrooms surface }
       serviceDetail { offerType }
       vehicleDetail { operation brand model engine transmission }
     }
@@ -563,6 +563,28 @@ export const FOLLOWING_COUNT = gql`
   }
 `;
 
+// ─── Business contact ───────────────────────────────────────────────────────
+
+export const BUSINESS_CONTACT = gql`
+  query BusinessContact {
+    businessContact {
+      phone
+      email
+    }
+  }
+`;
+
+// ─── PREMIUM stats ──────────────────────────────────────────────────────────
+
+export const MY_VIEWS_DAILY = gql`
+  query MyViewsDaily($days: Int) {
+    myViewsDaily(days: $days) {
+      date
+      count
+    }
+  }
+`;
+
 // ─── Saved Searches ──────────────────────────────────────────────────────────
 
 export const MY_SAVED_SEARCHES = gql`
@@ -641,6 +663,29 @@ export const GET_HOME_SECTIONS = gql`
         propertyDetail { operation }
         serviceDetail { offerType }
       }
+    }
+  }
+`;
+
+export const GET_FILTERABLE_SECTIONS = gql`
+  query FilterableSections {
+    filterableSections {
+      id
+      type
+      title
+      icon
+      filter
+    }
+  }
+`;
+
+export const GET_SECTION_PRODUCTS = gql`
+  query SectionProducts($sectionId: String!, $take: Int, $skip: Int) {
+    sectionProducts(sectionId: $sectionId, take: $take, skip: $skip) {
+      ${PRODUCT_CARD_FIELDS}
+      vehicleDetail { operation brand model engine transmission }
+      propertyDetail { operation bedrooms bathrooms surface }
+      serviceDetail { offerType }
     }
   }
 `;

@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { useBusinessContact } from '@/hooks/useBusinessContact';
+import { useMemo } from "react";
 
 const LAST_UPDATED = "8 de julio de 2026";
 
@@ -10,7 +12,7 @@ interface Section {
   body: string;
 }
 
-const SECTIONS: Section[] = [
+const buildSections = (email: string, whatsapp: string): Section[] => [
   {
     title: "1. Responsable del tratamiento",
     body: "El responsable del tratamiento de tus datos personales es Bomelh, plataforma de anuncios clasificados con actividad en Guinea Ecuatorial.\n\nPara cualquier consulta relacionada con tus datos, puedes contactarnos en soporte@marketeg.com.",
@@ -53,11 +55,14 @@ const SECTIONS: Section[] = [
   },
   {
     title: "11. Contacto",
-    body: "Para cualquier consulta sobre esta Politica de Privacidad o el tratamiento de tus datos:\n\nEmail: soporte@marketeg.com\nWhatsApp: +240 222 000 000",
+    body: `Para cualquier consulta sobre esta Política de Privacidad o el tratamiento de tus datos:\n\n• Email: ${email}\n• Contacto: ${whatsapp}`,
   },
 ];
 
 export default function PrivacyPage() {
+  const { email, phone } = useBusinessContact();
+  const sections = useMemo(() => buildSections(email, phone), [email, phone]);
+
   return (
     <div className="mx-auto max-w-3xl px-4 py-6 sm:px-6">
       {/* Header */}
@@ -78,7 +83,7 @@ export default function PrivacyPage() {
       </p>
 
       <div className="space-y-8">
-        {SECTIONS.map((section) => (
+        {sections.map((section) => (
           <section key={section.title}>
             <h2 className="mb-2 text-base font-bold text-on-surface">
               {section.title}

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   Search,
   Bell,
@@ -15,14 +15,25 @@ import {
 import { useQuery } from "@apollo/client/react";
 import { useAuth } from "@/hooks/useAuth";
 import { resolveImage } from "@/lib/config";
-import { UNREAD_COUNT, GET_CATEGORIES } from "@/graphql/queries";
+import { UNREAD_COUNT } from "@/graphql/queries";
+import NotificationsDropdown from "@/components/NotificationsDropdown";
 import ThemeToggle from "./ThemeToggle";
 import BrandLogo from "./BrandLogo";
+import { useRefetchOnFocus } from "@/hooks/useRefetchOnFocus";
+import { useNotifications } from "@/hooks/useNotifications";
+
 
 export default function Header() {
   const router = useRouter();
   const { isAuthenticated, user } = useAuth();
   const [q, setQ] = useState("");
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [notifAnchor, setNotifAnchor] = useState<{ top: number; right: number } | null>(null);
+  const bellButtonRef = useRef<HTMLButtonElement>(null);
+
+  const { refetch: refreshNotification } = useNotifications();
+
+  useRefetchOnFocus([refreshNotification]);
 
   // Unread notifications count
   const { data: unreadData } = useQuery(UNREAD_COUNT, {
@@ -32,10 +43,17 @@ export default function Header() {
   }) as { data: any };
   const unreadCount = unreadData?.unreadNotificationsCount ?? 0;
 
-  // Root categories for the pill bar
-  const { data: catData } = useQuery(GET_CATEGORIES) as { data: any };
-  const categories = catData?.categories ?? [];
-  const rootCategories = categories.filter((c: any) => !c.parentId);
+  const openNotifs = () => {
+    // Anchor the dropdown just below the bell.
+    const rect = bellButtonRef.current?.getBoundingClientRect();
+    if (rect) {
+      setNotifAnchor({
+        top: rect.bottom + 8,
+        right: Math.max(window.innerWidth - rect.right, 8),
+      });
+    }
+    setNotifOpen(true);
+  };
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -73,19 +91,22 @@ export default function Header() {
 
         {/* Desktop nav — icon buttons + actions */}
         <nav className="ml-auto hidden items-center gap-1 sm:flex">
-          <Link
+          {isAuthenticated && (<Link
             href="/saved"
             aria-label="Favoritos"
             title="Favoritos"
             className="grid h-10 w-10 place-items-center rounded-full text-on-surface-variant transition hover:bg-surface-container hover:text-on-surface"
           >
             <Heart size={20} strokeWidth={1.7} />
-          </Link>
+          </Link>)}
           {isAuthenticated && (
-            <Link
-              href="/notifications"
+            <button
+              ref={bellButtonRef}
+              type="button"
+              onClick={openNotifs}
               aria-label="Notificaciones"
               title="Notificaciones"
+              aria-expanded={notifOpen}
               className="relative grid h-10 w-10 place-items-center rounded-full text-on-surface-variant transition hover:bg-surface-container hover:text-on-surface"
             >
               <Bell size={20} strokeWidth={1.6} />
@@ -94,16 +115,16 @@ export default function Header() {
                   {unreadCount > 99 ? "99+" : unreadCount}
                 </span>
               )}
-            </Link>
+            </button>
           )}
           <ThemeToggle />
-          <Link
+          {isAuthenticated && (<Link
             href="/post"
             className="ml-1 flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-on-primary shadow-soft transition hover:bg-primary/90"
           >
             <Plus size={17} strokeWidth={2.4} />
             Vender
-          </Link>
+          </Link>)}
           {isAuthenticated ? (
             <Link
               href="/profile"
@@ -133,14 +154,14 @@ export default function Header() {
 
         {/* Mobile right actions */}
         <div className="ml-auto flex items-center gap-1 sm:hidden">
-          <ThemeToggle />
-          <Link
+         <Link
             href="/explore"
             className="grid h-10 w-10 place-items-center rounded-full text-primary"
             aria-label="Buscar"
           >
             <Search size={22} strokeWidth={1.8} />
           </Link>
+          <ThemeToggle />
           {isAuthenticated ? (
             <Link
               href="/notifications"
@@ -166,33 +187,13 @@ export default function Header() {
         </div>
       </div>
 
-      {/* ── Category pill bar ────────────────────────────────────── */}
-      {rootCategories.length > 0 && (
-        <div className="border-t border-outline-variant/30 bg-surface/60">
-          <div className="mx-auto flex max-w-7xl items-center gap-1 overflow-x-auto px-3 py-2 scrollbar-hide sm:px-4">
-            <Link
-              href="/explore"
-              className="flex shrink-0 items-center gap-1.5 rounded-full bg-primary px-3.5 py-1.5 text-sm font-semibold text-on-primary transition hover:bg-primary/90"
-            >
-              <LayoutGrid size={14} strokeWidth={2} />
-              Todo
-            </Link>
-            {rootCategories.map((cat: any) => (
-              <Link
-                key={cat.id}
-                href={`/explore?cat=${cat.slug}`}
-                className="flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-medium text-muted transition hover:bg-surface-container hover:text-on-surface"
-              >
-                <span
-                  className="h-2 w-2 shrink-0 rounded-full"
-                  style={{ backgroundColor: cat.color || "#006b5e" }}
-                />
-                {cat.label}
-              </Link>
-            ))}
-          </div>
-        </div>
-      )}
+      {/* Notifications dropdown (anchored to the bell above) */}
+      <NotificationsDropdown
+        open={notifOpen}
+        onClose={() => setNotifOpen(false)}
+        anchor={notifAnchor}
+      />
+
     </header>
   );
 }

@@ -6,6 +6,12 @@ export const GRAPHQL_URL =
 
 export const UPLOAD_URL = `${API_URL}/upload`;
 
+/** Public-facing URL used for share links. The shop IS this URL, so we
+ *  prefer `window.location.origin` at runtime and fall back to the env var
+ *  for SSR/first render. */
+export const SHARE_URL =
+  process.env.NEXT_PUBLIC_SHARE_URL || "https://bomelh.com";
+
 /** Consumer (shop) session token — issued via Google sign-in. */
 export const TOKEN_KEY = "market_token";
 

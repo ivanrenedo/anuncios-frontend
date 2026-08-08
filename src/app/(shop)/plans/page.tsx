@@ -114,7 +114,7 @@ export default function PlansPage() {
       {/* Header */}
       <div className="mb-6 flex items-center gap-3">
         <Link
-          href="/"
+          href="/profile"
           className="grid h-9 w-9 place-items-center rounded-full bg-surface-container text-on-surface transition hover:bg-surface-container/80"
         >
           <ArrowLeft size={18} strokeWidth={2} />

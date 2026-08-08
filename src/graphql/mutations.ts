@@ -156,6 +156,12 @@ export const UPDATE_PRODUCT = gql`
   }
 `;
 
+export const DELETE_PRODUCT = gql`
+  mutation DeleteProduct($id: String!) {
+    deleteProduct(id: $id) { id }
+  }
+`;
+
 export const VIEW_PRODUCT = gql`
   mutation ViewProduct($id: String!, $viewerKey: String) {
     viewProduct(id: $id, viewerKey: $viewerKey) { id views }
@@ -311,9 +317,41 @@ export const MARK_ALL_NOTIFICATIONS_READ = gql`
   }
 `;
 
+export const DELETE_NOTIFICATION = gql`
+  mutation DeleteNotification($id: String!) {
+    deleteNotification(id: $id) { id }
+  }
+`;
+
 export const DELETE_ALL_NOTIFICATIONS = gql`
   mutation DeleteAllNotifications {
     deleteAllNotifications
+  }
+`;
+
+// ─── Reviews ──────────────────────────────────────────────────────────────────
+
+export const CREATE_REVIEW = gql`
+  mutation CreateReview($input: CreateReviewInput!) {
+    createReview(input: $input) {
+      id rating text createdAt
+      author { id name avatarUrl }
+    }
+  }
+`;
+
+export const UPDATE_REVIEW = gql`
+  mutation UpdateReview($id: String!, $input: UpdateReviewInput!) {
+    updateReview(id: $id, input: $input) {
+      id rating text createdAt
+      author { id name avatarUrl }
+    }
+  }
+`;
+
+export const DELETE_REVIEW = gql`
+  mutation DeleteReview($id: String!) {
+    deleteReview(id: $id) { id }
   }
 `;
 
