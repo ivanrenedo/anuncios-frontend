@@ -136,9 +136,45 @@ export default function PublicUserProfile() {
   const products: Product[] = prodData?.productsBySeller ?? [];
   const visibleProducts = products.filter((p) => p.status !== "hide");
   const pinnedProducts: Product[] = pinnedData?.pinnedProducts ?? [];
-  // Drop pinned rows from the main grid so a product doesn't appear twice.
   const pinnedIds = new Set(pinnedProducts.map((p) => p.id));
-  const nonPinnedVisible = visibleProducts.filter((p) => !pinnedIds.has(p.id));
+
+  // v2 Fase 11.2 — el perfil ES la tienda para Premium. Merge de pinned +
+  // resto en una sola lista, pinned primero (por orden dado por el server),
+  // no-pinned después por orden natural. El icono 📌 en la card viene por
+  // props del ProductGrid.
+  const sortedProducts = [
+    ...pinnedProducts,
+    ...visibleProducts.filter((p) => !pinnedIds.has(p.id)),
+  ];
+
+  // v2 Fase 11.2 — para Premium, exponemos las categorías del vendedor como
+  // tabs (siguiendo el patrón de mobile). Se muestra solo si hay >1 categoría
+  // distinta en su catálogo activo.
+  const isPremiumActive =
+    user?.plan === "PREMIUM" &&
+    (!user?.planExpiresAt || new Date(user.planExpiresAt) > new Date());
+  const categoryTabs = (() => {
+    if (!isPremiumActive) return [];
+    const map = new Map<string, string>();
+    for (const p of visibleProducts) {
+      if (p.category?.id && p.category?.label) {
+        map.set(p.category.id, p.category.label);
+      }
+    }
+    return Array.from(map.entries()).map(([id, label]) => ({ id, label }));
+  })();
+  const [selectedCat, setSelectedCat] = useState<string | null>(null);
+  const filteredSorted = selectedCat
+    ? sortedProducts.filter((p) => p.category?.id === selectedCat)
+    : sortedProducts;
+
+  const verifiedSince =
+    isPremiumActive && user?.businessVerifiedAt
+      ? new Date(user.businessVerifiedAt).toLocaleDateString("es-ES", {
+          month: "long",
+          year: "numeric",
+        })
+      : null;
 
   const planLabel =
     user?.plan === "PREMIUM"
@@ -336,20 +372,15 @@ export default function PublicUserProfile() {
           </div>
 
           <div className="flex flex-wrap gap-2">
-            {/* v2 Fase 10a.3 — CTA a la tienda Premium. Solo aparece cuando
-                el vendedor es Premium activo; el link es discoverable desde
-                cualquier producto o desde el propio perfil. */}
-            {user.plan === "PREMIUM" &&
-              (!user.planExpiresAt ||
-                new Date(user.planExpiresAt) > new Date()) && (
-                <Link
-                  href={`/tienda/${user.id}`}
-                  className="flex items-center gap-1.5 rounded-lg bg-purple-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-purple-700"
-                >
-                  <Crown size={16} strokeWidth={2} />
-                  Ver tienda
-                </Link>
-              )}
+            {/* v2 Fase 11.2 — "Ver tienda" CTA retirado: el perfil de un
+                Premium ES la tienda. Verificado since chip informa el status
+                del negocio directamente sobre la avatar/header. */}
+            {verifiedSince && (
+              <span className="inline-flex items-center gap-1.5 rounded-lg bg-purple-600 px-3 py-2 text-xs font-extrabold uppercase tracking-wide text-white">
+                <Crown size={13} strokeWidth={2.5} />
+                Verificado desde {verifiedSince}
+              </span>
+            )}
             {!isOwn && (
               <>
                 <button
@@ -426,24 +457,48 @@ export default function PublicUserProfile() {
             </p>
           ) : (
             <>
-              {pinnedProducts.length > 0 && (
-                <div className="mb-6">
-                  <div className="mb-2 flex items-center gap-1.5 px-1">
-                    <span className="text-[11px] font-extrabold uppercase tracking-wide text-primary">
-                      📌 Anuncios fijados
-                    </span>
-                  </div>
-                  <ProductGrid
-                    products={pinnedProducts}
-                    loading={false}
-                    pageSize={pinnedProducts.length}
-                  />
+              {/* v2 Fase 11.2 — tabs por categoría en tiendas Premium.
+                  Chip pill horizontal scroll con "Todos" + cada categoría
+                  activa del vendedor. Auto-hide si <2 categorías. */}
+              {categoryTabs.length > 1 && (
+                <div className="mb-4 flex flex-wrap gap-2 px-4 sm:px-6">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedCat(null)}
+                    className={`rounded-full px-3 py-1.5 text-xs font-bold transition ${
+                      selectedCat === null
+                        ? "bg-primary text-on-primary"
+                        : "bg-surface-container text-on-surface-variant hover:bg-surface-high"
+                    }`}
+                  >
+                    Todos ({visibleProducts.length})
+                  </button>
+                  {categoryTabs.map((c) => {
+                    const count = visibleProducts.filter(
+                      (p) => p.category?.id === c.id,
+                    ).length;
+                    return (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => setSelectedCat(c.id)}
+                        className={`rounded-full px-3 py-1.5 text-xs font-bold transition ${
+                          selectedCat === c.id
+                            ? "bg-primary text-on-primary"
+                            : "bg-surface-container text-on-surface-variant hover:bg-surface-high"
+                        }`}
+                      >
+                        {c.label} ({count})
+                      </button>
+                    );
+                  })}
                 </div>
               )}
               <ProductGrid
-                products={nonPinnedVisible}
+                products={filteredSorted}
                 loading={prodLoading}
                 pageSize={16}
+                pinnedIds={pinnedIds}
               />
             </>
           ))}

@@ -15,6 +15,10 @@ export default function ProductGrid({
   paginate = true,
   pageSize = DEFAULT_PAGE_SIZE,
   initialCount,
+  pinnedIds,
+  autoBumpedIds,
+  onTogglePin,
+  onToggleAutoBump,
 }: {
   products: Product[];
   loading?: boolean;
@@ -35,6 +39,15 @@ export default function ProductGrid({
   pageSize?: number;
   /** Cuántos productos mostrar de entrada. Por defecto == pageSize. */
   initialCount?: number;
+  /** v2 Fase 11.2 — set de ids fijados; cada card los renderiza con badge. */
+  pinnedIds?: Set<string>;
+  /** v2 Fase 11.3 — set de ids con auto-bump; badge amarillo. */
+  autoBumpedIds?: Set<string>;
+  /** v2 Fase 11.3 — habilita botón pin por card cuando el user es owner y
+   *  su plan lo permite. La factoría por-id vive en el padre. */
+  onTogglePin?: (productId: string) => void;
+  /** v2 Fase 11.3 — habilita botón auto-bump por card, mismo patrón. */
+  onToggleAutoBump?: (productId: string) => void;
 }) {
   const startCount = initialCount ?? pageSize;
   const [count, setCount] = useState(startCount);
@@ -63,7 +76,17 @@ export default function ProductGrid({
             ))
           : visible.map((p) => (
             <div key={p.id} className="group grid animate-fade-in overflow-hidden rounded-xl border border-outline-variant/30 bg-surface-lowest transition hover:border-outline-variant/60 hover:shadow-card">
-              <ProductCard key={p.id} product={p} ownerActions={ownerActions} />
+              <ProductCard
+                key={p.id}
+                product={p}
+                ownerActions={ownerActions}
+                isPinned={pinnedIds?.has(p.id) ?? false}
+                isAutoBumped={autoBumpedIds?.has(p.id) ?? false}
+                onTogglePin={onTogglePin ? () => onTogglePin(p.id) : undefined}
+                onToggleAutoBump={
+                  onToggleAutoBump ? () => onToggleAutoBump(p.id) : undefined
+                }
+              />
             </div>
             ))}
       </div>

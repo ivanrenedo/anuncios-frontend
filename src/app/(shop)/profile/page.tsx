@@ -43,8 +43,17 @@ import {
 import { useReviewsBySeller, useSellerRating } from "@/hooks/useReviews";
 import { useRefetchOnFocus } from "@/hooks/useRefetchOnFocus";
 import { useShare } from "@/hooks/useShare";
-import { useQuery } from "@apollo/client/react";
-import { PRODUCTS_BY_SELLER, MY_VIEWS_DAILY } from "@/graphql/queries";
+import { useQuery, useMutation } from "@apollo/client/react";
+import {
+  PRODUCTS_BY_SELLER,
+  MY_VIEWS_DAILY,
+  PINNED_PRODUCTS,
+  MY_AUTO_BUMP_SLOTS,
+} from "@/graphql/queries";
+import {
+  SET_PINNED_PRODUCTS,
+  SET_AUTO_BUMP_SLOTS,
+} from "@/graphql/mutations";
 import { resolveImage } from "@/lib/config";
 import { formatDate, formatNumber, timeAgo } from "@/lib/format";
 import ProductGrid from "@/components/ProductGrid";
@@ -69,7 +78,8 @@ export default function ProfilePage() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [tab, setTab] = useState<Tab>("listings");
   const [viewerUri, setViewerUri] = useState<string | null>(null);
-  const { share } = useShare(); 
+  const [verificationModalOpen, setVerificationModalOpen] = useState(false);
+  const { share } = useShare();
 
   const {
     data: prodData,
@@ -106,6 +116,63 @@ export default function ProfilePage() {
   const effectivePlan = profile?.effectivePlan ?? profile?.plan ?? "FREE";
   const hasStatsAccess = effectivePlan === "STAR" || effectivePlan === "PREMIUM";
   const hasFullStats = effectivePlan === "PREMIUM";
+  const canPin = effectivePlan === "STAR" || effectivePlan === "PREMIUM";
+  const canAutoBump = canPin;
+
+  // v2 Fase 11.3 — fetch de pinned + slots del owner para poder mostrar el
+  // estado por card y togglear. Skip cuando el plan no lo permite (evita
+  // roundtrips inútiles y errores del server que ya rechaza Free/Basic).
+  const { data: pinnedData, refetch: refetchPinned } = useQuery(
+    PINNED_PRODUCTS,
+    {
+      variables: { userId },
+      skip: !userId || !canPin,
+      fetchPolicy: "cache-and-network",
+    },
+  ) as { data: any; refetch: () => Promise<any> };
+  const { data: slotsData, refetch: refetchSlots } = useQuery(
+    MY_AUTO_BUMP_SLOTS,
+    { skip: !canAutoBump, fetchPolicy: "cache-and-network" },
+  ) as { data: any; refetch: () => Promise<any> };
+  const pinnedIds = new Set<string>(
+    (pinnedData?.pinnedProducts ?? []).map((p: any) => p.id),
+  );
+  const autoBumpedIds = new Set<string>(
+    (slotsData?.myAutoBumpSlots ?? []).map((s: any) => s.productId),
+  );
+
+  const [setPinnedMut] = useMutation(SET_PINNED_PRODUCTS, {
+    refetchQueries: ["PinnedProducts"],
+  });
+  const [setSlotsMut] = useMutation(SET_AUTO_BUMP_SLOTS, {
+    refetchQueries: ["MyAutoBumpSlots"],
+  });
+
+  const togglePin = async (productId: string) => {
+    const current = Array.from(pinnedIds);
+    const next = current.includes(productId)
+      ? current.filter((x) => x !== productId)
+      : [...current, productId];
+    try {
+      await setPinnedMut({ variables: { productIds: next } });
+      refetchPinned();
+    } catch (e: any) {
+      alert(e?.message ?? "No se pudo actualizar los anuncios fijados.");
+    }
+  };
+
+  const toggleAutoBump = async (productId: string) => {
+    const current = Array.from(autoBumpedIds);
+    const next = current.includes(productId)
+      ? current.filter((x) => x !== productId)
+      : [...current, productId];
+    try {
+      await setSlotsMut({ variables: { productIds: next } });
+      refetchSlots();
+    } catch (e: any) {
+      alert(e?.message ?? "No se pudo actualizar el pool de auto-bump.");
+    }
+  };
 
   // Daily views chart is PREMIUM-only.
   const { data: viewsData } = useQuery(MY_VIEWS_DAILY, {
@@ -220,7 +287,6 @@ export default function ProfilePage() {
   // modal que permite adjuntar docs (mejor evidencia para el admin, menos
   // rechazos por falta de info). El submit dentro del modal llama a la
   // misma requestVerification con docs opcionales.
-  const [verificationModalOpen, setVerificationModalOpen] = useState(false);
   const handleRequestVerification = () => {
     setVerificationModalOpen(true);
   };
@@ -672,6 +738,10 @@ export default function ProfilePage() {
                 loading={prodLoading}
                 ownerActions
                 pageSize={16}
+                pinnedIds={pinnedIds}
+                autoBumpedIds={autoBumpedIds}
+                onTogglePin={canPin ? togglePin : undefined}
+                onToggleAutoBump={canAutoBump ? toggleAutoBump : undefined}
               />
             </>
           ))}

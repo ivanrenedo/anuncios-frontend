@@ -34,6 +34,7 @@ import {
   ExternalLink,
   Megaphone,
   Sparkles,
+  Flame,
 } from "lucide-react";
 import { useProduct } from "@/hooks/useProducts";
 import {
@@ -422,7 +423,7 @@ export default function ProductDetailPage({
               que no se rompan en pantallas estrechas. En sm+ vuelven a la
               misma línea si hay espacio. */}
           <div className="mt-4 rounded-xl border border-outline-variant/30 bg-surface-lowest p-4">
-            <div className="flex gap-2 flex-row flex-wrap items-start sm:gap-x-3 sm:gap-y-2">
+            <div className="flex gap-2 flex-row flex-wrap items-center sm:gap-x-3 sm:gap-y-2">
               <span className="text-3xl font-extrabold leading-none tracking-tight text-primary sm:text-4xl">
                 {formatPrice(price.final)}
               </span>
@@ -436,6 +437,18 @@ export default function ProductDetailPage({
                   </span>
                 </div>
               )}
+              {/* v2 Fase 11.1 — chip "Rebajado" 48h para vendedores Star/Premium */}
+              {product.priceReducedUntil &&
+                new Date(product.priceReducedUntil) > new Date() &&
+                (sellerPlan === "STAR" || sellerPlan === "PREMIUM") && (
+                  <span
+                    title="Precio bajado en las últimas 48 horas"
+                    className="inline-flex items-center gap-1 rounded-full bg-orange-500/15 px-2.5 py-1 text-xs font-extrabold uppercase tracking-wide text-orange-600"
+                  >
+                    <Flame size={12} strokeWidth={2.5} />
+                    Rebajado
+                  </span>
+                )}
             </div>
             {price.hasDiscount && (
               <p className="mt-2 inline-flex max-w-full items-center gap-1.5 rounded-lg bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 sm:text-sm">

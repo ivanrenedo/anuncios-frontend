@@ -99,7 +99,7 @@ const PLANS: PlanDef[] = [
       { label: "8 destacados incluidos al mes (−50 % extra)", included: true },
       { label: "10 anuncios fijados en tu perfil", included: true },
       { label: "Auto-bump diario (pool 5)", included: true },
-      { label: "Tienda propia /tienda/tu-slug", included: true },
+      { label: "Perfil Premium con tienda integrada", included: true },
       { label: "Carrusel \"Tiendas Premium\" en portada", included: true },
       { label: "Sin anuncios de terceros en tu ficha", included: true },
       { label: "Verificación 👑 + analytics completo", included: true },

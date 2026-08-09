@@ -14,7 +14,9 @@ interface Props {
 }
 
 const MAX_DOCS = 5;
-const ACCEPTED = "image/png,image/jpeg,image/webp,application/pdf";
+// v2 Fase 11.4 — solo imágenes. Los PDFs quedaron fuera porque el modal admin
+// renderiza thumbnails inline; un formato mixto complica la revisión.
+const ACCEPTED = "image/png,image/jpeg,image/webp";
 
 /**
  * v2 Fase 10c — modal para solicitar verificación con documentos.
@@ -92,8 +94,9 @@ export default function VerificationRequestModal({
               Solicitar verificación
             </h3>
             <p className="mt-0.5 text-xs text-on-surface-variant">
-              Adjunta documentos (DNI, licencia de negocio, selfie con
-              documento). Un admin revisa manualmente en menos de 48 h.
+              Adjunta fotos (DNI, licencia de negocio, selfie con documento).
+              Solo imágenes JPG, PNG o WEBP — máximo {MAX_DOCS}. Un admin
+              revisa manualmente en menos de 48 h.
             </p>
           </div>
           <button
@@ -123,7 +126,7 @@ export default function VerificationRequestModal({
                   {uploading ? "Subiendo…" : "Subir documento"}
                 </p>
                 <p className="mt-1 text-[11px] text-on-surface-variant">
-                  Imagen o PDF · máx {MAX_DOCS} archivos
+                  Solo imágenes (JPG · PNG · WEBP) · máx {MAX_DOCS}
                 </p>
               </div>
             </button>
