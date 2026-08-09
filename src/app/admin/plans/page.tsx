@@ -4,10 +4,11 @@ import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation } from "@apollo/client/react";
 import { GET_USERS } from "@/graphql/queries";
 import {
-  CHANGE_PLAN,
-  GET_PLAN_HISTORY,
+  ADMIN_ACTIVATE_PLAN,
   DELETE_PLAN_CHANGES,
+  GET_PLAN_HISTORY,
 } from "@/graphql/mutations";
+import { PLAN_ACTIVATIONS, PLAN_TOTAL_PREVIEW } from "@/graphql/queries";
 import DataTable from "@/components/admin/DataTable";
 import Badge from "@/components/admin/Badge";
 import Modal from "@/components/admin/Modal";
@@ -17,7 +18,18 @@ import { formatDate } from "@/lib/format";
 import { resolveImage } from "@/lib/config";
 import { getErrorMessage } from "@/lib/errors";
 import { useAbilities } from "@/hooks/useAbilities";
-import { Crown, Star, User, Search, History, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  Crown,
+  Star,
+  ShieldCheck,
+  User,
+  Search,
+  History,
+  Trash2,
+  ChevronLeft,
+  ChevronRight,
+  AlertTriangle,
+} from "lucide-react";
 
 const USERS_PAGE_SIZE = 20;
 const HISTORY_PAGE_SIZE = 10;
@@ -32,21 +44,25 @@ interface UserRow {
   planExpiresAt?: string | null;
 }
 
+// v2: 4 planes en la escala. FREE no factura pero aparece para el downgrade
+// / filtro. Etiquetas en español coinciden con /plans (customer-facing) para
+// que admin y usuario compartan vocabulario.
 const PLAN_LABELS: Record<string, string> = {
   FREE: "Gratis",
+  BASIC: "Básico",
   STAR: "Estrella",
   PREMIUM: "Premium",
 };
 
 const PLAN_COLORS: Record<string, string> = {
   FREE: "pending",
+  BASIC: "active",
   STAR: "active",
   PREMIUM: "sold",
 };
 
-// A paid plan whose expiry date has already passed counts as FREE — mirror the
-// backend downgrade (effectivePlan + the daily expiry cron) so the admin table
-// doesn't keep showing a stale paid badge in the window before the cron runs.
+const PAID_PLANS = ["BASIC", "STAR", "PREMIUM"] as const;
+
 const effectivePlanOf = (u: {
   plan?: string;
   planExpiresAt?: string | null;
@@ -55,17 +71,34 @@ const effectivePlanOf = (u: {
     ? "FREE"
     : u.plan || "FREE";
 
+function planIcon(plan: string) {
+  if (plan === "PREMIUM") return <Crown size={14} className="text-purple-500" />;
+  if (plan === "STAR") return <Star size={14} className="text-amber-500" />;
+  if (plan === "BASIC") return <ShieldCheck size={14} className="text-sky-500" />;
+  return <User size={14} className="text-gray-400" />;
+}
+
+function fmtXaf(n: number): string {
+  return new Intl.NumberFormat("es-ES").format(n);
+}
+
 export default function AdminPlans() {
   const { data, loading, refetch } = useQuery(GET_USERS) as {
     data: any;
     loading: boolean;
     refetch: () => void;
   };
-  const [changePlan, { loading: saving }] = useMutation(CHANGE_PLAN);
+  const [adminActivatePlan, { loading: saving }] =
+    useMutation(ADMIN_ACTIVATE_PLAN);
+
   const [search, setSearch] = useState("");
   const [filterPlan, setFilterPlan] = useState<string>("ALL");
   const [editUser, setEditUser] = useState<UserRow | null>(null);
-  const [form, setForm] = useState({ plan: "FREE", expiresAt: "", reason: "" });
+  const [form, setForm] = useState<{
+    plan: (typeof PAID_PLANS)[number];
+    months: number;
+    notes: string;
+  }>({ plan: "STAR", months: 1, notes: "" });
   const [error, setError] = useState("");
 
   const [historyUser, setHistoryUser] = useState<UserRow | null>(null);
@@ -73,16 +106,41 @@ export default function AdminPlans() {
   const [historySelected, setHistorySelected] = useState<Set<string>>(new Set());
   const [historyError, setHistoryError] = useState("");
   const { isSuperAdmin } = useAbilities();
-  const { data: historyData, loading: historyLoading, refetch: refetchHistory } =
-    useQuery(GET_PLAN_HISTORY, {
+
+  // v2: activations (multi-mes con desglose) — primary history source.
+  const { data: activationsData, refetch: refetchActivations } = useQuery(
+    PLAN_ACTIVATIONS,
+    {
       variables: { userId: historyUser?.id ?? "" },
       skip: !historyUser,
       fetchPolicy: "cache-and-network",
-    }) as { data: any; loading: boolean; refetch: () => Promise<unknown> };
+    },
+  ) as { data: any; refetch: () => Promise<unknown> };
+
+  // Legacy PlanChange rows kept for backward-compat with pre-v2 activations.
+  const {
+    data: historyData,
+    loading: historyLoading,
+    refetch: refetchHistory,
+  } = useQuery(GET_PLAN_HISTORY, {
+    variables: { userId: historyUser?.id ?? "" },
+    skip: !historyUser,
+    fetchPolicy: "cache-and-network",
+  }) as { data: any; loading: boolean; refetch: () => Promise<unknown> };
+
   const [deletePlanChanges, { loading: deletingHistory }] =
     useMutation(DELETE_PLAN_CHANGES);
 
-  // Reset paging + selection whenever the modal opens on a different user.
+  // Real-time preview of the activation total. Debounced would be nicer but
+  // the query is pure server-side (no DB) so re-running on every months
+  // change is cheap and the Apollo cache dedups within a session.
+  const { data: previewData } = useQuery(PLAN_TOTAL_PREVIEW, {
+    variables: { plan: form.plan, months: form.months },
+    skip: !editUser,
+    fetchPolicy: "cache-and-network",
+  }) as { data: any };
+  const preview = previewData?.planTotalPreview;
+
   useEffect(() => {
     setHistoryPage(0);
     setHistorySelected(new Set());
@@ -98,7 +156,7 @@ export default function AdminPlans() {
       result = result.filter(
         (u) =>
           u.name?.toLowerCase().includes(q) ||
-          u.email?.toLowerCase().includes(q)
+          u.email?.toLowerCase().includes(q),
       );
     }
     if (filterPlan !== "ALL") {
@@ -108,7 +166,7 @@ export default function AdminPlans() {
   }, [users, search, filterPlan]);
 
   const stats = useMemo(() => {
-    const counts = { FREE: 0, STAR: 0, PREMIUM: 0 };
+    const counts = { FREE: 0, BASIC: 0, STAR: 0, PREMIUM: 0 };
     for (const u of users) {
       const p = effectivePlanOf(u) as keyof typeof counts;
       if (p in counts) counts[p]++;
@@ -116,7 +174,6 @@ export default function AdminPlans() {
     return counts;
   }, [users]);
 
-  // Paid plans expiring within 7 days — the manual-renewal chase list.
   const expiringSoon = useMemo(() => {
     const now = Date.now();
     const week = now + 7 * 24 * 60 * 60 * 1000;
@@ -137,34 +194,36 @@ export default function AdminPlans() {
     const phone = (u.phone ?? "").replace(/[^0-9]/g, "");
     if (!phone) return;
     const msg = encodeURIComponent(
-      `Hola ${u.name}, tu plan ${PLAN_LABELS[u.plan ?? "FREE"]} de Bomelh expira el ${formatDate(u.planExpiresAt)}. ¿Quieres renovarlo?`,
+      `Hola ${u.name}, tu plan ${PLAN_LABELS[u.plan ?? "FREE"]} de Bomelh expira el ${formatDate(
+        u.planExpiresAt,
+      )}. ¿Quieres renovarlo?`,
     );
     window.open(`https://wa.me/${phone}?text=${msg}`, "_blank");
   };
 
   const openEdit = (user: UserRow) => {
     setEditUser(user);
-    setForm({
-      plan: user.plan || "FREE",
-      expiresAt: user.planExpiresAt
-        ? new Date(user.planExpiresAt).toISOString().slice(0, 16)
-        : "",
-      reason: "",
-    });
+    // Prefill with the user's current plan (or STAR if they're Free/Basic) so
+    // the admin can renew with a single click. Default to 1 month so the total
+    // is small and the admin has to opt into a longer commitment.
+    const seed = (PAID_PLANS as readonly string[]).includes(user.plan ?? "")
+      ? (user.plan as (typeof PAID_PLANS)[number])
+      : "STAR";
+    setForm({ plan: seed, months: 1, notes: "" });
     setError("");
   };
 
-  const handleSave = async () => {
+  const handleActivate = async () => {
     if (!editUser) return;
     setError("");
     try {
-      await changePlan({
+      await adminActivatePlan({
         variables: {
           input: {
             userId: editUser.id,
             plan: form.plan,
-            expiresAt: form.expiresAt ? new Date(form.expiresAt).toISOString() : null,
-            reason: form.reason || null,
+            months: form.months,
+            notes: form.notes || null,
           },
         },
       });
@@ -175,14 +234,6 @@ export default function AdminPlans() {
     }
   };
 
-  const planIcon = (plan: string) => {
-    if (plan === "PREMIUM")
-      return <Crown size={14} className="text-purple-500" />;
-    if (plan === "STAR")
-      return <Star size={14} className="text-amber-500" />;
-    return <User size={14} className="text-gray-400" />;
-  };
-
   const columns = [
     {
       key: "name",
@@ -190,6 +241,7 @@ export default function AdminPlans() {
       render: (u: UserRow) => (
         <div className="flex items-center gap-3">
           {u.avatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
             <img
               src={resolveImage(u.avatarUrl)}
               alt=""
@@ -247,7 +299,7 @@ export default function AdminPlans() {
       <button
         onClick={() => openEdit(u)}
         className="rounded-lg p-1.5 text-muted hover:bg-surface-container hover:text-primary"
-        title="Cambiar plan"
+        title="Activar plan"
       >
         <Crown size={15} />
       </button>
@@ -261,16 +313,39 @@ export default function AdminPlans() {
     </div>
   );
 
-  const history: any[] = historyData?.planHistory ?? [];
+  const legacyHistory: any[] = historyData?.planHistory ?? [];
+  const activations: any[] = activationsData?.planActivations ?? [];
+  // Merge both timelines so the admin sees one chronological list. Activations
+  // are the primary v2 source; legacy PlanChange rows are annotated so
+  // reviewers can tell them apart at a glance.
+  const mergedHistory = useMemo(() => {
+    const items = [
+      ...activations.map((a) => ({ ...a, kind: "activation" as const })),
+      ...legacyHistory.map((h) => ({ ...h, kind: "change" as const })),
+    ];
+    items.sort((a, b) => {
+      const at =
+        (a.kind === "activation" ? a.activatedAt : a.createdAt) ?? "";
+      const bt =
+        (b.kind === "activation" ? b.activatedAt : b.createdAt) ?? "";
+      return new Date(bt).getTime() - new Date(at).getTime();
+    });
+    return items;
+  }, [activations, legacyHistory]);
+
   const historyTotalPages = Math.max(
     1,
-    Math.ceil(history.length / HISTORY_PAGE_SIZE),
+    Math.ceil(mergedHistory.length / HISTORY_PAGE_SIZE),
   );
   const historyCurrentPage = Math.min(historyPage, historyTotalPages - 1);
-  const historyPageItems = history.slice(
+  const historyPageItems = mergedHistory.slice(
     historyCurrentPage * HISTORY_PAGE_SIZE,
     historyCurrentPage * HISTORY_PAGE_SIZE + HISTORY_PAGE_SIZE,
   );
+
+  const legacyIdsOnPage = historyPageItems
+    .filter((h) => h.kind === "change")
+    .map((h) => h.id);
 
   const toggleHistorySelect = (id: string) => {
     setHistorySelected((prev) => {
@@ -282,12 +357,12 @@ export default function AdminPlans() {
   };
   const toggleHistorySelectPage = () => {
     setHistorySelected((prev) => {
-      const pageIds = historyPageItems.map((h) => h.id);
       const allSelected =
-        pageIds.length > 0 && pageIds.every((id) => prev.has(id));
+        legacyIdsOnPage.length > 0 &&
+        legacyIdsOnPage.every((id) => prev.has(id));
       const next = new Set(prev);
-      if (allSelected) pageIds.forEach((id) => next.delete(id));
-      else pageIds.forEach((id) => next.add(id));
+      if (allSelected) legacyIdsOnPage.forEach((id) => next.delete(id));
+      else legacyIdsOnPage.forEach((id) => next.add(id));
       return next;
     });
   };
@@ -303,14 +378,14 @@ export default function AdminPlans() {
         return next;
       });
       await refetchHistory();
+      await refetchActivations();
     } catch (e) {
-      setHistoryError(
-        getErrorMessage(e, "No se pudo eliminar el historial."),
-      );
+      setHistoryError(getErrorMessage(e, "No se pudo eliminar el historial."));
     }
   };
   const deleteHistoryRow = (id: string) => {
-    if (!confirm("¿Eliminar esta entrada del historial? No se puede deshacer.")) return;
+    if (!confirm("¿Eliminar esta entrada del historial? No se puede deshacer."))
+      return;
     runDeleteHistory([id]);
   };
   const deleteHistorySelected = () => {
@@ -333,18 +408,23 @@ export default function AdminPlans() {
             Gestión de planes
           </h1>
           <p className="mt-1 text-sm text-muted">
-            Asigna planes Estrella y Premium a los usuarios
+            Activa planes Básico, Estrella y Premium con duración de 1 a 12 meses
           </p>
         </div>
         <ExportButton model="plan-changes" label="Exportar historial" />
       </div>
 
-      {/* Stats */}
-      <div className="mb-6 grid grid-cols-3 gap-4">
+      {/* Stats — 4 cards ahora (v2 add BASIC) */}
+      <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
         <div className="rounded-xl border border-outline-variant/30 bg-surface-lowest p-4 text-center">
           <User size={20} className="mx-auto mb-1 text-gray-400" />
           <p className="text-2xl font-bold text-on-surface">{stats.FREE}</p>
           <p className="text-xs text-muted">Gratis</p>
+        </div>
+        <div className="rounded-xl border border-outline-variant/30 bg-surface-lowest p-4 text-center">
+          <ShieldCheck size={20} className="mx-auto mb-1 text-sky-500" />
+          <p className="text-2xl font-bold text-on-surface">{stats.BASIC}</p>
+          <p className="text-xs text-muted">Básico</p>
         </div>
         <div className="rounded-xl border border-outline-variant/30 bg-surface-lowest p-4 text-center">
           <Star size={20} className="mx-auto mb-1 text-amber-500" />
@@ -358,11 +438,11 @@ export default function AdminPlans() {
         </div>
       </div>
 
-      {/* Renovaciones próximas */}
       {expiringSoon.length > 0 && (
         <div className="mb-6 rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4">
           <p className="mb-3 text-sm font-semibold text-on-surface">
-            ⏳ Renovaciones próximas ({expiringSoon.length}) — expiran en los próximos días
+            ⏳ Renovaciones próximas ({expiringSoon.length}) — expiran en los
+            próximos días
           </p>
           <div className="space-y-2">
             {expiringSoon.map((u) => (
@@ -372,16 +452,23 @@ export default function AdminPlans() {
               >
                 {u.avatarUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={resolveImage(u.avatarUrl)} alt="" className="h-8 w-8 rounded-full object-cover" />
+                  <img
+                    src={resolveImage(u.avatarUrl)}
+                    alt=""
+                    className="h-8 w-8 rounded-full object-cover"
+                  />
                 ) : (
                   <div className="grid h-8 w-8 place-items-center rounded-full bg-primary/15 text-sm font-bold text-primary">
                     {u.name?.charAt(0)}
                   </div>
                 )}
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-on-surface">{u.name}</p>
+                  <p className="truncate text-sm font-medium text-on-surface">
+                    {u.name}
+                  </p>
                   <p className="text-xs text-muted">
-                    {PLAN_LABELS[u.plan ?? "FREE"]} · expira {formatDate(u.planExpiresAt)}
+                    {PLAN_LABELS[u.plan ?? "FREE"]} · expira{" "}
+                    {formatDate(u.planExpiresAt)}
                   </p>
                 </div>
                 {u.phone ? (
@@ -406,7 +493,6 @@ export default function AdminPlans() {
         </div>
       )}
 
-      {/* Filters */}
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <div className="relative flex-1">
           <Search
@@ -428,6 +514,7 @@ export default function AdminPlans() {
         >
           <option value="ALL">Todos los planes</option>
           <option value="FREE">Gratis</option>
+          <option value="BASIC">Básico</option>
           <option value="STAR">Estrella</option>
           <option value="PREMIUM">Premium</option>
         </select>
@@ -442,56 +529,138 @@ export default function AdminPlans() {
         pageSize={USERS_PAGE_SIZE}
       />
 
-      {/* Edit modal */}
+      {/* v2 Activate modal — plan × months con preview en tiempo real */}
       <Modal
         open={!!editUser}
         onClose={() => setEditUser(null)}
-        title={`Cambiar plan — ${editUser?.name}`}
+        title={`Activar plan — ${editUser?.name}`}
       >
         <div className="space-y-4">
-          <div>
-            <label className="mb-1 block text-sm font-medium text-on-surface">
-              Plan
-            </label>
-            <select
-              value={form.plan}
-              onChange={(e) => setForm({ ...form, plan: e.target.value })}
-              className="w-full rounded-xl border border-outline-variant/40 bg-surface-lowest px-3 py-2.5 text-sm text-on-surface focus:border-primary focus:outline-none"
-            >
-              <option value="FREE">Gratis</option>
-              <option value="STAR">Estrella</option>
-              <option value="PREMIUM">Premium</option>
-            </select>
-          </div>
-
-          {form.plan !== "FREE" && (
+          <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="mb-1 block text-sm font-medium text-on-surface">
-                Fecha de expiración
+                Plan
               </label>
-              <input
-                type="datetime-local"
-                value={form.expiresAt}
+              <select
+                value={form.plan}
                 onChange={(e) =>
-                  setForm({ ...form, expiresAt: e.target.value })
+                  setForm({
+                    ...form,
+                    plan: e.target.value as (typeof PAID_PLANS)[number],
+                  })
                 }
                 className="w-full rounded-xl border border-outline-variant/40 bg-surface-lowest px-3 py-2.5 text-sm text-on-surface focus:border-primary focus:outline-none"
+              >
+                {PAID_PLANS.map((p) => (
+                  <option key={p} value={p}>
+                    {PLAN_LABELS[p]}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="mb-1 block text-sm font-medium text-on-surface">
+                Meses (1–12)
+              </label>
+              <select
+                value={form.months}
+                onChange={(e) =>
+                  setForm({ ...form, months: Number(e.target.value) })
+                }
+                className="w-full rounded-xl border border-outline-variant/40 bg-surface-lowest px-3 py-2.5 text-sm text-on-surface focus:border-primary focus:outline-none"
+              >
+                {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                  <option key={m} value={m}>
+                    {m} {m === 1 ? "mes" : "meses"}
+                    {m === 3 || m === 5
+                      ? " · −5 %"
+                      : m === 6 || m === 11
+                        ? " · −10 %"
+                        : m === 12
+                          ? " · −25 %"
+                          : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Preview breakdown (server-side). Shown as soon as the query
+              lands so the admin sees the total before typing anything else. */}
+          {preview && (
+            <div className="rounded-xl border border-outline-variant/40 bg-surface-low px-4 py-3 text-sm">
+              <div className="flex items-baseline justify-between">
+                <span className="text-muted">
+                  Precio unitario · {form.months}{" "}
+                  {form.months === 1 ? "mes" : "meses"}
+                </span>
+                <span className="font-mono text-on-surface">
+                  {fmtXaf(Number(preview.unitPrice))} × {form.months} ={" "}
+                  {fmtXaf(Number(preview.gross))} XAF
+                </span>
+              </div>
+              {Number(preview.discountPct) > 0 && (
+                <div className="mt-1 flex items-baseline justify-between text-emerald-600">
+                  <span>
+                    Descuento (−
+                    {Math.round(Number(preview.discountPct) * 100)} %)
+                  </span>
+                  <span className="font-mono">
+                    −{fmtXaf(Number(preview.discountAmount))} XAF
+                  </span>
+                </div>
+              )}
+              <div className="mt-2 flex items-baseline justify-between border-t border-outline-variant/40 pt-2">
+                <span className="text-base font-bold text-on-surface">
+                  Total
+                </span>
+                <span className="font-mono text-base font-extrabold text-on-surface">
+                  {fmtXaf(Number(preview.total))} XAF
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* v2 Fase 8: warning when 12m is strictly cheaper than the chosen
+              duration. Today only triggers at 11m; the helper stays general so
+              a future re-tune of DISCOUNT_TIERS is caught automatically. */}
+          {preview?.cheaperAtTwelve?.triggered && (
+            <div className="flex items-start gap-3 rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-3">
+              <AlertTriangle
+                size={18}
+                strokeWidth={2}
+                className="mt-0.5 shrink-0 text-amber-600"
               />
-              <p className="mt-1 text-xs text-muted">
-                Deja vacío para plan sin expiración
-              </p>
+              <div className="min-w-0 flex-1 text-sm">
+                <p className="font-semibold text-on-surface">
+                  Con 12 meses pagaría{" "}
+                  {fmtXaf(preview.cheaperAtTwelve.yearlyTotal)} XAF y ahorra{" "}
+                  <span className="text-emerald-600">
+                    {fmtXaf(preview.cheaperAtTwelve.savings)} XAF
+                  </span>
+                  .
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setForm({ ...form, months: 12 })}
+                  className="mt-2 rounded-lg bg-amber-500 px-3 py-1.5 text-xs font-bold text-white hover:bg-amber-600"
+                >
+                  Cambiar a 12 meses
+                </button>
+              </div>
             </div>
           )}
 
           <div>
             <label className="mb-1 block text-sm font-medium text-on-surface">
-              Motivo (opcional)
+              Notas (opcional)
             </label>
             <input
               type="text"
-              value={form.reason}
-              onChange={(e) => setForm({ ...form, reason: e.target.value })}
-              placeholder="Ej: Pago recibido en persona"
+              value={form.notes}
+              onChange={(e) => setForm({ ...form, notes: e.target.value })}
+              placeholder="Ej: transferencia bancaria #4821"
               className="w-full rounded-xl border border-outline-variant/40 bg-surface-lowest px-3 py-2.5 text-sm text-on-surface placeholder:text-muted focus:border-primary focus:outline-none"
             />
           </div>
@@ -510,28 +679,28 @@ export default function AdminPlans() {
               Cancelar
             </button>
             <button
-              onClick={handleSave}
+              onClick={handleActivate}
               disabled={saving}
               className="flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary/90 disabled:opacity-50"
             >
               {saving && <Spinner size={14} />}
-              Guardar
+              Confirmar activación
             </button>
           </div>
         </div>
       </Modal>
 
-      {/* History modal */}
+      {/* History modal — muestra activations v2 + PlanChange legacy */}
       <Modal
         open={!!historyUser}
         onClose={() => setHistoryUser(null)}
-        title={`Historial de planes — ${historyUser?.name}`}
+        title={`Historial — ${historyUser?.name}`}
       >
-        {historyLoading && history.length === 0 ? (
+        {historyLoading && mergedHistory.length === 0 ? (
           <div className="flex justify-center py-8">
             <Spinner />
           </div>
-        ) : history.length === 0 ? (
+        ) : mergedHistory.length === 0 ? (
           <p className="py-8 text-center text-sm text-muted">
             Sin cambios de plan registrados
           </p>
@@ -543,21 +712,21 @@ export default function AdminPlans() {
               </div>
             )}
 
-            {isSuperAdmin && (
+            {isSuperAdmin && legacyIdsOnPage.length > 0 && (
               <div className="flex items-center justify-between rounded-xl border border-outline-variant/40 bg-surface-low px-3 py-2">
                 <label className="flex cursor-pointer items-center gap-2 text-xs text-muted">
                   <input
                     type="checkbox"
                     checked={
-                      historyPageItems.length > 0 &&
-                      historyPageItems.every((h) => historySelected.has(h.id))
+                      legacyIdsOnPage.length > 0 &&
+                      legacyIdsOnPage.every((id) => historySelected.has(id))
                     }
                     onChange={toggleHistorySelectPage}
                     className="h-4 w-4 cursor-pointer accent-primary"
                   />
                   {historySelected.size > 0
-                    ? `${historySelected.size} seleccionada(s)`
-                    : "Seleccionar página"}
+                    ? `${historySelected.size} legacy seleccionada(s)`
+                    : "Seleccionar legacy de esta página"}
                 </label>
                 {historySelected.size > 0 && (
                   <div className="flex items-center gap-2">
@@ -584,56 +753,109 @@ export default function AdminPlans() {
               </div>
             )}
 
-            <div className="max-h-80 space-y-3 overflow-y-auto">
-              {historyPageItems.map((h) => (
-                <div
-                  key={h.id}
-                  className="flex items-start gap-3 rounded-xl border border-outline-variant/30 bg-surface-low px-4 py-3"
-                >
-                  {isSuperAdmin && (
-                    <input
-                      type="checkbox"
-                      checked={historySelected.has(h.id)}
-                      onChange={() => toggleHistorySelect(h.id)}
-                      className="mt-1 h-4 w-4 cursor-pointer accent-primary"
-                      aria-label="Seleccionar"
-                    />
-                  )}
-                  <div className="min-w-0 flex-1">
+            <div className="max-h-96 space-y-3 overflow-y-auto">
+              {historyPageItems.map((h) =>
+                h.kind === "activation" ? (
+                  <div
+                    key={`a-${h.id}`}
+                    className="rounded-xl border border-primary/25 bg-primary/5 px-4 py-3"
+                  >
                     <div className="flex items-center gap-2 text-sm">
-                      <Badge variant={PLAN_COLORS[h.oldPlan] as any}>
-                        {PLAN_LABELS[h.oldPlan]}
+                      <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-primary">
+                        v2 · activación
+                      </span>
+                      <Badge variant={PLAN_COLORS[h.plan] as any}>
+                        {PLAN_LABELS[h.plan]}
                       </Badge>
-                      <span className="text-muted">→</span>
-                      <Badge variant={PLAN_COLORS[h.newPlan] as any}>
-                        {PLAN_LABELS[h.newPlan]}
-                      </Badge>
+                      <span className="text-xs font-semibold text-on-surface-variant">
+                        × {h.months} {h.months === 1 ? "mes" : "meses"}
+                      </span>
                     </div>
-                    <div className="mt-1 flex gap-4 text-xs text-muted">
-                      <span>{formatDate(h.createdAt)}</span>
-                      {h.expiresAt && (
-                        <span>Expira: {formatDate(h.expiresAt)}</span>
-                      )}
+                    <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
+                      <div className="text-muted">
+                        Total pagado
+                        <div className="font-mono text-sm font-bold text-on-surface">
+                          {fmtXaf(Number(h.totalPaid))} XAF
+                        </div>
+                      </div>
+                      <div className="text-muted">
+                        Descuento
+                        <div className="font-mono text-sm font-bold text-on-surface">
+                          {Math.round(Number(h.discountPct) * 100)} %
+                        </div>
+                      </div>
+                      <div className="text-muted">
+                        Inicio
+                        <div className="font-mono text-sm text-on-surface">
+                          {formatDate(h.startsAt)}
+                        </div>
+                      </div>
+                      <div className="text-muted">
+                        Fin
+                        <div className="font-mono text-sm text-on-surface">
+                          {formatDate(h.endsAt)}
+                        </div>
+                      </div>
                     </div>
-                    {h.reason && (
-                      <p className="mt-1 text-xs text-on-surface-variant">
-                        {h.reason}
+                    {h.notes && (
+                      <p className="mt-2 text-xs italic text-on-surface-variant">
+                        “{h.notes}”
                       </p>
                     )}
                   </div>
-                  {isSuperAdmin && (
-                    <button
-                      type="button"
-                      onClick={() => deleteHistoryRow(h.id)}
-                      disabled={deletingHistory}
-                      title="Eliminar entrada"
-                      className="inline-grid h-8 w-8 place-items-center rounded-lg border border-outline-variant/50 bg-surface-lowest text-danger transition hover:bg-danger/10 disabled:opacity-40"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  )}
-                </div>
-              ))}
+                ) : (
+                  <div
+                    key={`c-${h.id}`}
+                    className="flex items-start gap-3 rounded-xl border border-outline-variant/30 bg-surface-low px-4 py-3"
+                  >
+                    {isSuperAdmin && (
+                      <input
+                        type="checkbox"
+                        checked={historySelected.has(h.id)}
+                        onChange={() => toggleHistorySelect(h.id)}
+                        className="mt-1 h-4 w-4 cursor-pointer accent-primary"
+                        aria-label="Seleccionar"
+                      />
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 text-sm">
+                        <span className="rounded-full bg-outline-variant/25 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-on-surface-variant">
+                          legacy
+                        </span>
+                        <Badge variant={PLAN_COLORS[h.oldPlan] as any}>
+                          {PLAN_LABELS[h.oldPlan]}
+                        </Badge>
+                        <span className="text-muted">→</span>
+                        <Badge variant={PLAN_COLORS[h.newPlan] as any}>
+                          {PLAN_LABELS[h.newPlan]}
+                        </Badge>
+                      </div>
+                      <div className="mt-1 flex gap-4 text-xs text-muted">
+                        <span>{formatDate(h.createdAt)}</span>
+                        {h.expiresAt && (
+                          <span>Expira: {formatDate(h.expiresAt)}</span>
+                        )}
+                      </div>
+                      {h.reason && (
+                        <p className="mt-1 text-xs text-on-surface-variant">
+                          {h.reason}
+                        </p>
+                      )}
+                    </div>
+                    {isSuperAdmin && (
+                      <button
+                        type="button"
+                        onClick={() => deleteHistoryRow(h.id)}
+                        disabled={deletingHistory}
+                        title="Eliminar entrada"
+                        className="inline-grid h-8 w-8 place-items-center rounded-lg border border-outline-variant/50 bg-surface-lowest text-danger transition hover:bg-danger/10 disabled:opacity-40"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    )}
+                  </div>
+                ),
+              )}
             </div>
 
             {historyTotalPages > 1 && (
@@ -642,9 +864,9 @@ export default function AdminPlans() {
                   {historyCurrentPage * HISTORY_PAGE_SIZE + 1}–
                   {Math.min(
                     (historyCurrentPage + 1) * HISTORY_PAGE_SIZE,
-                    history.length,
+                    mergedHistory.length,
                   )}{" "}
-                  de {history.length}
+                  de {mergedHistory.length}
                 </span>
                 <div className="flex items-center gap-1">
                   <button

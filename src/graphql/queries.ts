@@ -792,6 +792,7 @@ export const GET_VERIFICATION_REQUESTS = gql`
       id
       userId
       status
+      docs
       rejectedReason
       reviewedAt
       createdAt
