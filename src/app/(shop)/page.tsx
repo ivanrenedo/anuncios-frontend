@@ -288,7 +288,15 @@ export default function HomePage() {
                 <TrackedSection section={section} trackEvent={trackEvent} />
                 {idx === firstProductIdx && firstProductIdx !== -1 && (
                   <>
-                  <AdSenseSlot slot="" width={728} height={90} className="mx-auto mt-5"  />
+                  {/* v2 Fase 12 — 320×50 en mobile (<sm), 728×90 en ≥sm (tablet+desktop) */}
+                  <AdSenseSlot
+                    slot=""
+                    width={728}
+                    height={90}
+                    mobileWidth={320}
+                    mobileHeight={50}
+                    className="mx-auto mt-5"
+                  />
                     <section className="px-4 pt-6 sm:px-6">
                       <div className="grid grid-cols-3 gap-3">
                         <TrustCell

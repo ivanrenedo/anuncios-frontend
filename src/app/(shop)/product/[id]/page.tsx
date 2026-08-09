@@ -262,7 +262,16 @@ export default function ProductDetailPage({
       {/* Top banner ad — Billboard 970x250 en desktop, 320x100 en móvil.
           Placeholder mientras no hay AdSense; el div interno queda listo
           para pegar el <ins class="adsbygoogle"> cuando exista slot. */}
-      <AdSenseSlot slot="" width={728} height={90} className="mb-5 mx-auto" sellerPlan={sellerPlan}  />
+      {/* v2 Fase 12 — 320×50 mobile / 728×90 tablet+desktop */}
+      <AdSenseSlot
+        slot=""
+        width={728}
+        height={90}
+        mobileWidth={320}
+        mobileHeight={50}
+        className="mb-5 mx-auto"
+        sellerPlan={sellerPlan}
+      />
 
       {/* Layout Wallapop-style: contenido centrado con dos rails de anuncios
           Half Page (300×600) sticky a los lados en escritorios anchos (≥ xl).

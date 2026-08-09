@@ -731,7 +731,15 @@ function ExploreInner() {
       {/* Search + filter button (sólo el botón se oculta en lg+) */}
       <div className="mb-3 flex items-center gap-2">
         <div className="flex flex-col w-full">
-          <AdSenseSlot slot="" width={728} height={90} className="mx-auto mb-5"  />
+          {/* v2 Fase 12 — 320×50 mobile / 728×90 tablet+desktop */}
+          <AdSenseSlot
+            slot=""
+            width={728}
+            height={90}
+            mobileWidth={320}
+            mobileHeight={50}
+            className="mx-auto mb-5"
+          />
           <div className="flex row gap-2">
             <div className="relative flex-1">
               <Search
