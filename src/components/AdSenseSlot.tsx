@@ -32,6 +32,14 @@ interface Props {
   /** Responsivo — deja que AdSense elija dimensiones. */
   responsive?: boolean;
   className?: string;
+  /**
+   * v2 (Fase 6b.3). Plan del vendedor cuya página se está renderizando. Si es
+   * PREMIUM, el slot se colapsa completamente (no placeholder, no ad) — un
+   * beneficio del plan es "Sin anuncios de terceros en tu ficha/tienda".
+   * Para páginas que no son de un vendedor concreto (home, categorías,
+   * búsqueda), no se pasa y el slot renderiza normalmente.
+   */
+  sellerPlan?: string | null;
 }
 
 const ADSENSE_CLIENT = process.env.NEXT_PUBLIC_ADSENSE_CLIENT || "";
@@ -57,9 +65,17 @@ export default function AdSenseSlot({
   format = "auto",
   responsive = false,
   className = "",
+  sellerPlan = null,
 }: Props) {
   const canShowAds = useHasConsent("advertising");
   const insRef = useRef<HTMLModElement | null>(null);
+
+  // Premium plan opts the seller's pages out of third-party ads entirely.
+  // Return null (not a placeholder) so the layout collapses to give the
+  // Premium storefront its clean, ad-free look.
+  if (sellerPlan === "PREMIUM") {
+    return null;
+  }
 
   useEffect(() => {
     if (!canShowAds) return;

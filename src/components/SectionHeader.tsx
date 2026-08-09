@@ -9,7 +9,7 @@ export default function SectionHeader({
   href,
   onClick,
 }: {
-  title: string;
+  title: ReactNode;
   subtitle?: string;
   icon?: ReactNode;
   href?: string;

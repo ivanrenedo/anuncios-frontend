@@ -27,6 +27,7 @@ import PromoCarousel from "@/components/home/PromoCarousel";
 import CategoryRail from "@/components/home/CategoryRail";
 import SectionHeader from "@/components/SectionHeader";
 import ProductRail from "@/components/ProductRail";
+import PremiumStoresRail from "@/components/home/PremiumStoresRail";
 import ProductGrid from "@/components/ProductGrid";
 import Skeleton from "@/components/Skeleton";
 import { useUnreadCount } from "@/hooks/useNotifications";
@@ -233,6 +234,10 @@ export default function HomePage() {
             <CategoryRail categories={rootCategories} />
           </section>
         )}
+
+        {/* v2 Fase 6b.2 — Tiendas Premium. Auto-hides when the day's carousel
+            is empty (no active Premium sellers picked by the cron). */}
+        <PremiumStoresRail />
 
         {/* Inline CTA — only when the logged-in user has zero listings.
             Same placement as mobile (right after the categories rail). */}
