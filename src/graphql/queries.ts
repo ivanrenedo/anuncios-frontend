@@ -898,3 +898,22 @@ export const PLAN_TOTAL_PREVIEW = gql`
     }
   }
 `;
+
+export const ADMIN_PLAN_STATS = gql`
+  query AdminPlanStats($monthsBack: Int) {
+    adminPlanStats(monthsBack: $monthsBack) {
+      distribution {
+        plan
+        count
+      }
+      activeMrr
+      churnedLast30d
+      expiringNext7d
+      activationsByMonth {
+        month
+        activations
+        revenue
+      }
+    }
+  }
+`;

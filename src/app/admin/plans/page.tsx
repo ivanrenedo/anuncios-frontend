@@ -14,6 +14,7 @@ import DataTable from "@/components/admin/DataTable";
 import Badge from "@/components/admin/Badge";
 import Modal from "@/components/admin/Modal";
 import ExportButton from "@/components/admin/ExportButton";
+import PlanStatsDashboard from "@/components/admin/PlanStatsDashboard";
 import Spinner from "@/components/Spinner";
 import { formatDate } from "@/lib/format";
 import { resolveImage } from "@/lib/config";
@@ -438,6 +439,9 @@ export default function AdminPlans() {
         </div>
         <ExportButton model="plan-changes" label="Exportar historial" />
       </div>
+
+      {/* v2 Fase 10d — dashboard con MRR, churn, distribución, activations */}
+      <PlanStatsDashboard />
 
       {/* Stats — 4 cards ahora (v2 add BASIC) */}
       <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
