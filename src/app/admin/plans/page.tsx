@@ -5,6 +5,7 @@ import { useQuery, useMutation } from "@apollo/client/react";
 import { GET_USERS } from "@/graphql/queries";
 import {
   ADMIN_ACTIVATE_PLAN,
+  CHANGE_PLAN,
   DELETE_PLAN_CHANGES,
   GET_PLAN_HISTORY,
 } from "@/graphql/mutations";
@@ -62,6 +63,11 @@ const PLAN_COLORS: Record<string, string> = {
 };
 
 const PAID_PLANS = ["BASIC", "STAR", "PREMIUM"] as const;
+// Todos los planes que el admin puede activar/asignar. FREE es un caso
+// especial (downgrade): sin meses, sin precio, sin descuento — se enruta al
+// mutation legacy CHANGE_PLAN que ya soporta el downgrade limpio.
+const SELECTABLE_PLANS = ["FREE", "BASIC", "STAR", "PREMIUM"] as const;
+type SelectablePlan = (typeof SELECTABLE_PLANS)[number];
 
 const effectivePlanOf = (u: {
   plan?: string;
@@ -88,14 +94,16 @@ export default function AdminPlans() {
     loading: boolean;
     refetch: () => void;
   };
-  const [adminActivatePlan, { loading: saving }] =
+  const [adminActivatePlan, { loading: savingActivate }] =
     useMutation(ADMIN_ACTIVATE_PLAN);
+  const [changePlanMut, { loading: savingChange }] = useMutation(CHANGE_PLAN);
+  const saving = savingActivate || savingChange;
 
   const [search, setSearch] = useState("");
   const [filterPlan, setFilterPlan] = useState<string>("ALL");
   const [editUser, setEditUser] = useState<UserRow | null>(null);
   const [form, setForm] = useState<{
-    plan: (typeof PAID_PLANS)[number];
+    plan: SelectablePlan;
     months: number;
     notes: string;
   }>({ plan: "STAR", months: 1, notes: "" });
@@ -134,12 +142,13 @@ export default function AdminPlans() {
   // Real-time preview of the activation total. Debounced would be nicer but
   // the query is pure server-side (no DB) so re-running on every months
   // change is cheap and the Apollo cache dedups within a session.
+  // Skip preview for FREE — downgrade path doesn't need pricing.
   const { data: previewData } = useQuery(PLAN_TOTAL_PREVIEW, {
     variables: { plan: form.plan, months: form.months },
-    skip: !editUser,
+    skip: !editUser || form.plan === "FREE",
     fetchPolicy: "cache-and-network",
   }) as { data: any };
-  const preview = previewData?.planTotalPreview;
+  const preview = form.plan === "FREE" ? null : previewData?.planTotalPreview;
 
   useEffect(() => {
     setHistoryPage(0);
@@ -207,7 +216,7 @@ export default function AdminPlans() {
     // the admin can renew with a single click. Default to 1 month so the total
     // is small and the admin has to opt into a longer commitment.
     const seed = (PAID_PLANS as readonly string[]).includes(user.plan ?? "")
-      ? (user.plan as (typeof PAID_PLANS)[number])
+      ? (user.plan as SelectablePlan)
       : "STAR";
     setForm({ plan: seed, months: 1, notes: "" });
     setError("");
@@ -217,16 +226,32 @@ export default function AdminPlans() {
     if (!editUser) return;
     setError("");
     try {
-      await adminActivatePlan({
-        variables: {
-          input: {
-            userId: editUser.id,
-            plan: form.plan,
-            months: form.months,
-            notes: form.notes || null,
+      if (form.plan === "FREE") {
+        // FREE es un downgrade: sin meses, sin precio, sin PlanActivation.
+        // Se enruta a changePlan legacy que limpia planExpiresAt y registra
+        // el cambio en PlanChange + admin_actions (para auditoría).
+        await changePlanMut({
+          variables: {
+            input: {
+              userId: editUser.id,
+              plan: "FREE",
+              expiresAt: null,
+              reason: form.notes || null,
+            },
           },
-        },
-      });
+        });
+      } else {
+        await adminActivatePlan({
+          variables: {
+            input: {
+              userId: editUser.id,
+              plan: form.plan,
+              months: form.months,
+              notes: form.notes || null,
+            },
+          },
+        });
+      }
       setEditUser(null);
       refetch();
     } catch (e: any) {
@@ -536,7 +561,11 @@ export default function AdminPlans() {
         title={`Activar plan — ${editUser?.name}`}
       >
         <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-3">
+          <div
+            className={
+              form.plan === "FREE" ? "grid grid-cols-1" : "grid grid-cols-2 gap-3"
+            }
+          >
             <div>
               <label className="mb-1 block text-sm font-medium text-on-surface">
                 Plan
@@ -544,47 +573,58 @@ export default function AdminPlans() {
               <select
                 value={form.plan}
                 onChange={(e) =>
-                  setForm({
-                    ...form,
-                    plan: e.target.value as (typeof PAID_PLANS)[number],
-                  })
+                  setForm({ ...form, plan: e.target.value as SelectablePlan })
                 }
                 className="w-full rounded-xl border border-outline-variant/40 bg-surface-lowest px-3 py-2.5 text-sm text-on-surface focus:border-primary focus:outline-none"
               >
-                {PAID_PLANS.map((p) => (
+                {SELECTABLE_PLANS.map((p) => (
                   <option key={p} value={p}>
                     {PLAN_LABELS[p]}
+                    {p === "FREE" ? " (downgrade)" : ""}
                   </option>
                 ))}
               </select>
             </div>
 
-            <div>
-              <label className="mb-1 block text-sm font-medium text-on-surface">
-                Meses (1–12)
-              </label>
-              <select
-                value={form.months}
-                onChange={(e) =>
-                  setForm({ ...form, months: Number(e.target.value) })
-                }
-                className="w-full rounded-xl border border-outline-variant/40 bg-surface-lowest px-3 py-2.5 text-sm text-on-surface focus:border-primary focus:outline-none"
-              >
-                {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
-                  <option key={m} value={m}>
-                    {m} {m === 1 ? "mes" : "meses"}
-                    {m === 3 || m === 5
-                      ? " · −5 %"
-                      : m === 6 || m === 11
-                        ? " · −10 %"
-                        : m === 12
-                          ? " · −25 %"
-                          : ""}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {form.plan !== "FREE" && (
+              <div>
+                <label className="mb-1 block text-sm font-medium text-on-surface">
+                  Meses (1–12)
+                </label>
+                <select
+                  value={form.months}
+                  onChange={(e) =>
+                    setForm({ ...form, months: Number(e.target.value) })
+                  }
+                  className="w-full rounded-xl border border-outline-variant/40 bg-surface-lowest px-3 py-2.5 text-sm text-on-surface focus:border-primary focus:outline-none"
+                >
+                  {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                    <option key={m} value={m}>
+                      {m} {m === 1 ? "mes" : "meses"}
+                      {m === 3 || m === 5
+                        ? " · −5 %"
+                        : m === 6 || m === 11
+                          ? " · −10 %"
+                          : m === 12
+                            ? " · −25 %"
+                            : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
+
+          {form.plan === "FREE" && (
+            <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-3 text-sm text-on-surface">
+              <p className="font-semibold">Downgrade a Gratis</p>
+              <p className="mt-1 text-xs text-on-surface-variant">
+                El usuario pierde inmediatamente su plan y cualquier tiempo
+                restante. No se registra pago. Queda en el historial legacy
+                para auditoría.
+              </p>
+            </div>
+          )}
 
           {/* Preview breakdown (server-side). Shown as soon as the query
               lands so the admin sees the total before typing anything else. */}

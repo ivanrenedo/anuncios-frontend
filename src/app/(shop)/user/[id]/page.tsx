@@ -335,7 +335,21 @@ export default function PublicUserProfile() {
             </div>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
+            {/* v2 Fase 10a.3 — CTA a la tienda Premium. Solo aparece cuando
+                el vendedor es Premium activo; el link es discoverable desde
+                cualquier producto o desde el propio perfil. */}
+            {user.plan === "PREMIUM" &&
+              (!user.planExpiresAt ||
+                new Date(user.planExpiresAt) > new Date()) && (
+                <Link
+                  href={`/tienda/${user.id}`}
+                  className="flex items-center gap-1.5 rounded-lg bg-purple-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-purple-700"
+                >
+                  <Crown size={16} strokeWidth={2} />
+                  Ver tienda
+                </Link>
+              )}
             {!isOwn && (
               <>
                 <button
