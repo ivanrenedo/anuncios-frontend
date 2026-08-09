@@ -600,25 +600,16 @@ export default function ProfilePage() {
             {hasFullStats && (
               <div className="mt-6">
                 <p className="text-xs font-semibold text-muted">
-                  Visitantes únicos últimos 7 días
-                </p>
-                <p className="mt-0.5 text-[10px] text-on-surface-variant/70">
-                  Cada visitante cuenta una vez, en su última visita. Puede
-                  no coincidir con el total de <strong>Visitas</strong> arriba,
-                  que suma visitas repetidas del mismo visitante en el histórico.
+                  Visitas últimos 7 días
                 </p>
                 {viewsDaily.length === 0 ? (
-                  // Backend garantiza 7 buckets aunque no haya visitas, así
-                  // que este empty-state cubre solo el caso de query en vuelo
-                  // o error silencioso — mejor que dejar el hueco vacío.
                   <p className="mt-2 rounded-lg bg-surface-container/60 px-3 py-6 text-center text-[11px] text-on-surface-variant">
-                    Cargando datos de visitantes…
+                    Cargando datos de visitas…
                   </p>
                 ) : totalWeekViews === 0 ? (
                   <p className="mt-2 rounded-lg bg-surface-container/60 px-3 py-6 text-center text-[11px] text-on-surface-variant">
-                    Ningún visitante único esta semana. Si el contador de
-                    Visitas arriba es &gt; 0, esas visitas o son antiguas
-                    (&gt;7 días) o del mismo visitante repetido.
+                    Aún no hay visitas registradas esta semana. Publica un
+                    anuncio nuevo o compártelo para atraer tráfico.
                   </p>
                 ) : (
                   // Grid con filas explícitas: barras (6rem) + labels (auto).
