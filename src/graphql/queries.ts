@@ -19,8 +19,11 @@ export const ME = gql`
       suspendedReason
       language
       plan
+      planCycle
+      planStartedAt
       planExpiresAt
       effectivePlan
+      businessVerifiedAt
       maxActiveProducts
       maxImagesPerProduct
       notifMessages
@@ -175,6 +178,7 @@ const PRODUCT_CARD_FIELDS = `
   favoritesCount
   bumpedAt
   boostedUntil
+  priceReducedUntil
   createdAt
   seller {
     id
@@ -236,6 +240,7 @@ export const GET_PRODUCT = gql`
       favoritesCount
       bumpedAt
       boostedUntil
+      priceReducedUntil
       createdAt
       seller {
         id
@@ -247,6 +252,7 @@ export const GET_PRODUCT = gql`
         plan
         phone
         showPhone
+        businessVerifiedAt
       }
       category {
         id
@@ -812,9 +818,82 @@ export const MY_VERIFICATION_REQUEST = gql`
     myVerificationRequest {
       id
       status
+      docs
       rejectedReason
       reviewedAt
       createdAt
+    }
+  }
+`;
+
+// ─── Plans v2 — pinned, autobump slots, home Premium carousel ────────────────
+
+export const PINNED_PRODUCTS = gql`
+  query PinnedProducts($userId: String!) {
+    pinnedProducts(userId: $userId) {
+      ${PRODUCT_CARD_FIELDS}
+    }
+  }
+`;
+
+export const MY_AUTO_BUMP_SLOTS = gql`
+  query MyAutoBumpSlots {
+    myAutoBumpSlots {
+      id
+      productId
+      cadence
+      createdAt
+      product {
+        id
+        title
+        images { id url sortOrder type thumbnailUrl }
+      }
+    }
+  }
+`;
+
+export const HOME_CAROUSEL_PREMIUM = gql`
+  query HomeCarouselPremium($take: Int) {
+    homeCarouselPremium(take: $take) {
+      ${PRODUCT_CARD_FIELDS}
+    }
+  }
+`;
+
+export const PLAN_ACTIVATIONS = gql`
+  query PlanActivations($userId: String!) {
+    planActivations(userId: $userId) {
+      id
+      plan
+      months
+      unitPrice
+      discountPct
+      totalPaid
+      activatedByAdminId
+      activatedAt
+      startsAt
+      endsAt
+      notes
+    }
+  }
+`;
+
+export const PLAN_TOTAL_PREVIEW = gql`
+  query PlanTotalPreview($plan: UserPlan!, $months: Int!) {
+    planTotalPreview(plan: $plan, months: $months) {
+      plan
+      months
+      unitPrice
+      gross
+      discountPct
+      discountAmount
+      total
+      cheaperAtTwelve {
+        triggered
+        currentTotal
+        yearlyTotal
+        savings
+      }
     }
   }
 `;

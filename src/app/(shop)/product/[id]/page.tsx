@@ -226,6 +226,18 @@ export default function ProductDetailPage({
   const sellerPhone = product.seller?.phone;
   const canShowPhone = product.seller?.showPhone && sellerPhone;
 
+  // v2 Fase 6a.7 — WhatsApp personalizado por plan del vendedor.
+  //  · Star/Premium con teléfono: la conversación va directamente al vendedor.
+  //  · Cualquier otro caso: la conversación va al número del negocio (la
+  //    plataforma es intermediaria para Free/Basic).
+  const sellerPlan = product.seller?.plan;
+  const canUsePersonalWa =
+    (sellerPlan === "STAR" || sellerPlan === "PREMIUM") && !!sellerPhone;
+  const waNumber = (canUsePersonalWa ? sellerPhone! : contactNumber)?.replace(
+    /[^0-9]/g,
+    "",
+  );
+
   // Contacto vía WhatsApp / llamada. Se abre primero el SafetyModal con
   // los consejos de seguridad, como en la app móvil, y desde ahí se lanza
   // la acción real. Registramos la métrica una vez por visita a la ficha.
@@ -790,7 +802,7 @@ export default function ProductDetailPage({
         mode={safetyMode ?? "tips"}
         onClose={() => setSafetyMode(null)}
         phoneNumber={sellerPhone || undefined}
-        whatsappNumber={sellerPhone?.replace(/[^0-9]/g, "")}
+        whatsappNumber={waNumber}
         whatsappMessage={`Hola, me interesa tu anuncio: ${product.title} — ${SHARE_URL}/product/${product.id}`}
       />
 

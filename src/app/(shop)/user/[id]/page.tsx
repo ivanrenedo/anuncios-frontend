@@ -24,7 +24,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { GET_USER } from "@/graphql/queries";
-import { PRODUCTS_BY_SELLER } from "@/graphql/queries";
+import { PRODUCTS_BY_SELLER, PINNED_PRODUCTS } from "@/graphql/queries";
 import { useAuth } from "@/hooks/useAuth";
 import {
   useFollowers,
@@ -81,6 +81,15 @@ export default function PublicUserProfile() {
     fetchPolicy: "cache-and-network",
   }) as { data: any; loading: boolean; refetch: () => Promise<any> };
 
+  // v2 Fase 6a.5: pinned products render before the main grid on Star/Premium
+  // seller profiles. The query is public but returns [] for plans that can't
+  // pin anything, so we can call it unconditionally without a plan gate.
+  const { data: pinnedData } = useQuery(PINNED_PRODUCTS, {
+    variables: { userId: id },
+    skip: !id,
+    fetchPolicy: "cache-and-network",
+  }) as { data: any };
+
   const {
     average: avgRating,
     count: ratingCount,
@@ -126,6 +135,10 @@ export default function PublicUserProfile() {
 
   const products: Product[] = prodData?.productsBySeller ?? [];
   const visibleProducts = products.filter((p) => p.status !== "hide");
+  const pinnedProducts: Product[] = pinnedData?.pinnedProducts ?? [];
+  // Drop pinned rows from the main grid so a product doesn't appear twice.
+  const pinnedIds = new Set(pinnedProducts.map((p) => p.id));
+  const nonPinnedVisible = visibleProducts.filter((p) => !pinnedIds.has(p.id));
 
   const planLabel =
     user?.plan === "PREMIUM"
@@ -398,11 +411,27 @@ export default function PublicUserProfile() {
               Este usuario no tiene anuncios publicados.
             </p>
           ) : (
-            <ProductGrid
-              products={visibleProducts}
-              loading={prodLoading}
-              pageSize={16}
-            />
+            <>
+              {pinnedProducts.length > 0 && (
+                <div className="mb-6">
+                  <div className="mb-2 flex items-center gap-1.5 px-1">
+                    <span className="text-[11px] font-extrabold uppercase tracking-wide text-primary">
+                      📌 Anuncios fijados
+                    </span>
+                  </div>
+                  <ProductGrid
+                    products={pinnedProducts}
+                    loading={false}
+                    pageSize={pinnedProducts.length}
+                  />
+                </div>
+              )}
+              <ProductGrid
+                products={nonPinnedVisible}
+                loading={prodLoading}
+                pageSize={16}
+              />
+            </>
           ))}
 
         {tab === "reviews" && (

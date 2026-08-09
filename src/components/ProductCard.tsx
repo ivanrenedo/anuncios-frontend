@@ -15,6 +15,7 @@ import {
   Trash2,
   Loader2,
   Clock,
+  Flame,
 } from "lucide-react";
 import type { Product } from "@/lib/types";
 import { resolveImage } from "@/lib/config";
@@ -58,6 +59,14 @@ export default function ProductCard({ product, ownerActions = false }: Props) {
   const sellerPlan = product.seller?.plan;
 
   const hasDiscount = (product.discount ?? 0) > 0 && (product.discount ?? 0) < 100;
+
+  // "Rebajado hoy" chip (v2 Fase 6a). Backend stamps `priceReducedUntil` on
+  // any price drop for 48 h; the chip is gated to Star/Premium sellers here
+  // so BASIC and FREE sellers never render it even if the timestamp is set.
+  const showRebajadoChip =
+    !!product.priceReducedUntil &&
+    new Date(product.priceReducedUntil) > new Date() &&
+    (sellerPlan === "STAR" || sellerPlan === "PREMIUM");
 
     const tags: { label: string; bg: string; color: string }[] = [];
   if (product.propertyDetail?.operation || product.vehicleDetail?.operation) tags.push({ label: product.propertyDetail?.operation! ?? product.vehicleDetail?.operation!, bg: '#E1F5EE', color: '#0F6E56' });
@@ -237,13 +246,22 @@ export default function ProductCard({ product, ownerActions = false }: Props) {
       <div className="px-3 py-4 group-[.grid]:px-2 group-[.grid]:py-3 sm:group-[.grid]:px-3 sm:group-[.grid]:py-4 sm:px-3 sm:py-4 flex flex-col flex-1">
         {/* Price first — the strongest signal */}
         <div className="flex flex-col flex-1">
-          <div className="flex flex-wrap gap-1.5 items-start leading-3">
+          <div className="flex flex-wrap gap-1.5 items-center leading-3">
             <span className={`text-[17px] group-[.grid]:text-base sm:text-lg font-bold leading-5 ${price.hasDiscount ? "text-danger" : "text-primary"}`}>
               {formatPrice(price.final)}
             </span>
             {price.hasDiscount && (
               <span className="text-[13px] group-[.grid]:text-[11px] text-muted line-through">
                 {formatPrice(price.original)}
+              </span>
+            )}
+            {showRebajadoChip && (
+              <span
+                title="Precio bajado en las últimas 48 horas"
+                className="inline-flex items-center gap-0.5 rounded-full bg-orange-500/15 px-1.5 py-0.5 text-[10px] font-extrabold uppercase leading-none tracking-wide text-orange-600"
+              >
+                <Flame size={9} strokeWidth={2.5} />
+                Rebajado
               </span>
             )}
           </div>
