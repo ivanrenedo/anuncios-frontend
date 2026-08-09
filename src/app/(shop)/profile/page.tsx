@@ -249,6 +249,7 @@ export default function ProfilePage() {
   const viewsDaily: { date: string; count: number }[] =
     viewsData?.myViewsDaily ?? [];
   const maxDaily = Math.max(1, ...viewsDaily.map((d) => d.count));
+  const totalWeekViews = viewsDaily.reduce((s, d) => s + d.count, 0);
 
   const planLabel =
     effectivePlan === "PREMIUM"
@@ -596,49 +597,77 @@ export default function ProfilePage() {
               )}
             </div>
 
-            {hasFullStats && viewsDaily.length > 0 && (
+            {hasFullStats && (
               <div className="mt-6">
                 <p className="text-xs font-semibold text-muted">
                   Visitas últimos 7 días
                 </p>
-                {/* Grid with explicit rows: bars area (flexible) + label area
-                    (fixed). Fixes the previous flex-column-with-percent-height
-                    bug where the inner bar had no reference height. */}
-                <div
-                  className="mt-3 grid gap-2"
-                  style={{
-                    gridTemplateColumns: `repeat(${viewsDaily.length}, minmax(0, 1fr))`,
-                    gridTemplateRows: "6rem auto",
-                  }}
-                >
-                  {viewsDaily.map((d) => (
-                    <div
-                      key={`${d.date}-bar`}
-                      className="flex items-end"
-                      style={{ gridRow: 1 }}
-                    >
-                      <div
-                        className="w-full rounded-t bg-primary/70 transition hover:bg-primary"
-                        style={{
-                          height: `${Math.max(4, (d.count / maxDaily) * 100)}%`,
-                        }}
-                        title={`${d.count} visita${d.count === 1 ? "" : "s"}`}
-                      />
-                    </div>
-                  ))}
-                  {viewsDaily.map((d) => (
-                    <span
-                      key={`${d.date}-lbl`}
-                      className="mt-1 text-center text-[10px] text-muted"
-                      style={{ gridRow: 2 }}
-                    >
-                      {new Date(d.date + "T00:00:00").toLocaleDateString(
-                        "es-ES",
-                        { weekday: "narrow" },
-                      )}
-                    </span>
-                  ))}
-                </div>
+                {viewsDaily.length === 0 ? (
+                  // Backend garantiza 7 buckets aunque no haya visitas, así
+                  // que este empty-state cubre solo el caso de query en vuelo
+                  // o error silencioso — mejor que dejar el hueco vacío.
+                  <p className="mt-2 rounded-lg bg-surface-container/60 px-3 py-6 text-center text-[11px] text-on-surface-variant">
+                    Cargando datos de visitas…
+                  </p>
+                ) : totalWeekViews === 0 ? (
+                  <p className="mt-2 rounded-lg bg-surface-container/60 px-3 py-6 text-center text-[11px] text-on-surface-variant">
+                    Aún no hay visitas registradas esta semana. Publica un
+                    anuncio nuevo o compártelo para atraer tráfico.
+                  </p>
+                ) : (
+                  // Grid con filas explícitas: barras (6rem) + labels (auto).
+                  // Cada bar-container es flex items-end y h-full — sin h-full
+                  // el porcentaje del hijo referenciaba el track pero algunos
+                  // browsers colapsaban el layout a 0 cuando el bar era el
+                  // único hijo del cell.
+                  <div
+                    className="mt-3 grid gap-2"
+                    style={{
+                      gridTemplateColumns: `repeat(${viewsDaily.length}, minmax(0, 1fr))`,
+                      gridTemplateRows: "6rem auto",
+                    }}
+                  >
+                    {viewsDaily.map((d) => {
+                      const pct = Math.round((d.count / maxDaily) * 100);
+                      return (
+                        <div
+                          key={`${d.date}-bar`}
+                          className="flex h-full items-end"
+                          style={{ gridRow: 1 }}
+                        >
+                          <div
+                            className={`w-full rounded-t transition ${
+                              d.count > 0
+                                ? "bg-primary/70 hover:bg-primary"
+                                : "bg-surface-container"
+                            }`}
+                            style={{
+                              // Days con 0 visitas: barra bajita para
+                              // "tick" visual; con visitas: proporcional al
+                              // máximo semanal.
+                              height: d.count > 0
+                                ? `${Math.max(6, pct)}%`
+                                : "4px",
+                            }}
+                            title={`${d.count} visita${d.count === 1 ? "" : "s"}`}
+                          />
+                        </div>
+                      );
+                    })}
+                    {viewsDaily.map((d) => (
+                      <span
+                        key={`${d.date}-lbl`}
+                        className="mt-1 text-center text-[10px] text-muted"
+                        style={{ gridRow: 2 }}
+                      >
+                        {new Date(d.date + "T00:00:00").toLocaleDateString(
+                          "es-ES",
+                          { weekday: "narrow" },
+                        )}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
