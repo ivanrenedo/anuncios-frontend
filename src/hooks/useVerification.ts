@@ -19,7 +19,10 @@ export function useRequestVerification() {
     awaitRefetchQueries: true,
   });
   return {
-    requestVerification: () => mutate(),
+    // v2 (Fase 10c): acepta URLs de documentos que se guardan en
+    // VerificationRequest.docs para que el admin los vea en /admin/verifications.
+    requestVerification: (docs?: string[]) =>
+      mutate({ variables: { input: docs?.length ? { docs } : null } }),
     loading,
   };
 }

@@ -49,6 +49,7 @@ import { resolveImage } from "@/lib/config";
 import { formatDate, formatNumber, timeAgo } from "@/lib/format";
 import ProductGrid from "@/components/ProductGrid";
 import PlanFeaturesPanel from "@/components/PlanFeaturesPanel";
+import VerificationRequestModal from "@/components/VerificationRequestModal";
 import Skeleton from "@/components/Skeleton";
 import ImageLightbox from "@/components/ImageLightbox";
 import SettingsModal from "@/components/SettingsModal";
@@ -215,13 +216,13 @@ export default function ProfilePage() {
   const planExpiringSoon =
     !!planExpiresAt && planDaysLeft !== null && planDaysLeft <= 7 && planDaysLeft > 0;
 
-  const handleRequestVerification = async () => {
-    try {
-      await requestVerification();
-      refetchVerification();
-    } catch {
-      alert("Error al solicitar la verificación.");
-    }
+  // v2 Fase 10c: en lugar de disparar la mutation directamente, abrimos el
+  // modal que permite adjuntar docs (mejor evidencia para el admin, menos
+  // rechazos por falta de info). El submit dentro del modal llama a la
+  // misma requestVerification con docs opcionales.
+  const [verificationModalOpen, setVerificationModalOpen] = useState(false);
+  const handleRequestVerification = () => {
+    setVerificationModalOpen(true);
   };
 
   const openViewer = (url?: string | null) => {
@@ -693,6 +694,12 @@ export default function ProfilePage() {
       <SettingsModal
         open={settingsOpen}
         onClose={() => setSettingsOpen(false)}
+      />
+
+      <VerificationRequestModal
+        open={verificationModalOpen}
+        onClose={() => setVerificationModalOpen(false)}
+        onSubmitted={() => refetchVerification()}
       />
 
       {viewerUri && (
