@@ -14,6 +14,8 @@ export const metadata: Metadata = {
   title: "Bomelh — Comprar y vender en Guinea Ecuatorial",
   description:
     "El marketplace de Guinea Ecuatorial. Compra y vende moda, tecnología, coches, hogar y servicios cerca de ti.",
+  // Ruta servida por src/app/manifest.ts — habilita PWA install prompt.
+  manifest: "/manifest.webmanifest",
   icons: {
     icon: [
       { url: "/favicon.png", sizes: "48x48", type: "image/png" },
@@ -22,7 +24,7 @@ export const metadata: Metadata = {
     ],
     apple: "/apple-touch-icon.png",
   },
-  
+
   themeColor: "#006b5e",
   openGraph: {
     title: "Bomelh — El marketplace de Guinea Ecuatorial",
