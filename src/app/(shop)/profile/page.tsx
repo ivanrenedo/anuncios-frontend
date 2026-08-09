@@ -48,6 +48,7 @@ import { PRODUCTS_BY_SELLER, MY_VIEWS_DAILY } from "@/graphql/queries";
 import { resolveImage } from "@/lib/config";
 import { formatDate, formatNumber, timeAgo } from "@/lib/format";
 import ProductGrid from "@/components/ProductGrid";
+import PlanFeaturesPanel from "@/components/PlanFeaturesPanel";
 import Skeleton from "@/components/Skeleton";
 import ImageLightbox from "@/components/ImageLightbox";
 import SettingsModal from "@/components/SettingsModal";
@@ -655,12 +656,23 @@ export default function ProfilePage() {
               </p>
             </div>
           ) : (
-            <ProductGrid
-              products={products}
-              loading={prodLoading}
-              ownerActions
-              pageSize={16}
-            />
+            <>
+              {/* v2 Fase 10b — panel plan-gateado para gestionar pins de
+                  perfil y pool de auto-bump. Renderiza null para Free/Basic. */}
+              {profile?.id && (
+                <PlanFeaturesPanel
+                  userId={profile.id}
+                  effectivePlan={effectivePlan}
+                  products={products}
+                />
+              )}
+              <ProductGrid
+                products={products}
+                loading={prodLoading}
+                ownerActions
+                pageSize={16}
+              />
+            </>
           ))}
 
         {tab === "reviews" && (
