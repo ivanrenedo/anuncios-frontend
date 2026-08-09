@@ -19,6 +19,7 @@ import {
   Package,
   Share2,
   MessageSquare,
+  MessageCircle,
   Edit3,
   Trash2,
   Loader2,
@@ -43,6 +44,7 @@ import {
 } from "@/hooks/useReviews";
 import { useRefetchOnFocus } from "@/hooks/useRefetchOnFocus";
 import { useShare } from "@/hooks/useShare";
+import { useBusinessContact } from "@/hooks/useBusinessContact";
 import { resolveImage } from "@/lib/config";
 import { formatDate, formatNumber, timeAgo } from "@/lib/format";
 import ProductGrid from "@/components/ProductGrid";
@@ -113,6 +115,23 @@ export default function PublicUserProfile() {
 
   const { follow, unfollow } = useFollowToggle();
   const { share } = useShare();
+  const { phone: businessPhone } = useBusinessContact();
+
+  // v2 Fase 12 (extend Fase 6a.7 pattern to profile) — WhatsApp del perfil:
+  //   · Star/Premium con phone: chat directo con el vendedor
+  //   · Free/Basic o sin phone: cae al número del negocio como intermediario
+  // Mismo gate que /product/[id] para que la experiencia sea consistente.
+  const sellerCanPersonalWa =
+    (user?.plan === "STAR" || user?.plan === "PREMIUM") && !!user?.phone;
+  const waRawNumber = sellerCanPersonalWa ? user?.phone : businessPhone;
+  const waNumber = waRawNumber ? waRawNumber.replace(/[^0-9]/g, "") : "";
+  const waHref = waNumber
+    ? `https://wa.me/${waNumber}?text=${encodeURIComponent(
+        sellerCanPersonalWa
+          ? `Hola, vi tu perfil en Bomelh — ${user?.name ?? ""}`
+          : `Hola, quiero contactar con el vendedor "${user?.name ?? ""}" en Bomelh.`,
+      )}`
+    : "";
 
   // Freshness on tab focus — follow-back, new reviews, new listings all show
   // up without a manual refresh.
@@ -318,7 +337,6 @@ export default function PublicUserProfile() {
                 <BadgeCheck
                   size={20}
                   className="fill-primary text-white"
-                  strokeWidth={0}
                 />
               )}
               {planLabel && (
@@ -383,6 +401,25 @@ export default function PublicUserProfile() {
             )}
             {!isOwn && (
               <>
+                {/* v2 Fase 12 — WhatsApp: acción primaria para contactar al
+                    vendedor / a su tienda. Verde emerald para diferenciar
+                    visualmente de "Seguir" (primary) y "Denunciar" (danger). */}
+                {waHref && (
+                  <a
+                    href={waHref}
+                    target="_blank"
+                    rel="noreferrer"
+                    aria-label={
+                      sellerCanPersonalWa
+                        ? "Escribir por WhatsApp al vendedor"
+                        : "Contactar por WhatsApp (soporte)"
+                    }
+                    className="flex items-center gap-1.5 rounded-lg bg-emerald-500 px-4 py-2 text-sm font-bold text-white transition hover:bg-emerald-600"
+                  >
+                    <MessageCircle size={16} strokeWidth={2} />
+                    WhatsApp
+                  </a>
+                )}
                 <button
                   onClick={onToggleFollow}
                   className={`flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-bold transition ${
