@@ -38,7 +38,10 @@ export default function PremiumStoresRail({ take = 30 }: { take?: number }) {
         }
         subtitle="Vendedores verificados con las mejores ofertas del día"
       />
-      <ProductRail products={products} />
+      {/* Autoplay para dar sensación de escaparate activo (mismo patrón que
+          el legacy premium_showcase). 4s por tile — mismo default que usa
+          el TrackedSection cuando renderiza premium_showcase. */}
+      <ProductRail products={products} autoplay autoplayMs={4000} />
     </section>
   );
 }
