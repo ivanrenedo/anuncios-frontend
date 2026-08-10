@@ -7,6 +7,7 @@ import { ArrowLeft, ShoppingBag } from "lucide-react";
 import { useAuth, type GoogleProfile } from "@/hooks/useAuth";
 import GoogleSignInButton from "@/components/GoogleSignInButton";
 import { getErrorMessage } from "@/lib/errors";
+import Spinner from "@/components/Spinner";
 
 const FEATURES = [
   "Publica anuncios gratis",
@@ -75,18 +76,12 @@ export default function LoginPage() {
         )}
 
         <div className={loading ? "pointer-events-none opacity-60" : ""}>
-          <GoogleSignInButton onSuccess={handleGoogle} onError={setError} />
+          {loading ? <Spinner /> : <GoogleSignInButton onSuccess={handleGoogle} onError={setError} />}
         </div>
 
         <p className="mt-5 text-center text-xs leading-5 text-muted">
           Al continuar, aceptas nuestros Términos de servicio y Política de
           privacidad.
-        </p>
-        <p className="mt-2 text-center text-xs text-muted">
-          ¿Eres administrador?{" "}
-          <Link href="/admin/login" className="font-semibold text-primary">
-            Acceso admin
-          </Link>
         </p>
       </div>
     </div>

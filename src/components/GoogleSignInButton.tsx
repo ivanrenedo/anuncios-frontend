@@ -32,6 +32,16 @@ export default function GoogleSignInButton({
   const ref = useRef<HTMLDivElement>(null);
   const [scriptReady, setScriptReady] = useState(false);
 
+  // Route callbacks through refs so a new closure identity from the parent
+  // does not re-run the init effect (which would call
+  // google.accounts.id.initialize() again — GIS warns about that).
+  const onSuccessRef = useRef(onSuccess);
+  const onErrorRef = useRef(onError);
+  useEffect(() => {
+    onSuccessRef.current = onSuccess;
+    onErrorRef.current = onError;
+  });
+
   // Load the GIS script once.
   useEffect(() => {
     if (window.google?.accounts?.id) {
@@ -49,9 +59,9 @@ export default function GoogleSignInButton({
     s.defer = true;
     s.id = "gsi-script";
     s.onload = () => setScriptReady(true);
-    s.onerror = () => onError?.("No se pudo cargar Google Sign-In");
+    s.onerror = () => onErrorRef.current?.("No se pudo cargar Google Sign-In");
     document.head.appendChild(s);
-  }, [onError]);
+  }, []);
 
   // Initialize + render the official button.
   useEffect(() => {
@@ -61,15 +71,15 @@ export default function GoogleSignInButton({
       client_id: GOOGLE_CLIENT_ID,
       callback: (resp: { credential?: string }) => {
         if (!resp.credential) {
-          onError?.("No se recibió la credencial de Google");
+          onErrorRef.current?.("No se recibió la credencial de Google");
           return;
         }
         const claims = decodeJwt(resp.credential);
         if (!claims.sub || !claims.email) {
-          onError?.("Credencial de Google inválida");
+          onErrorRef.current?.("Credencial de Google inválida");
           return;
         }
-        onSuccess({
+        onSuccessRef.current({
           id: claims.sub,
           email: claims.email,
           name: claims.name || claims.email,
@@ -86,7 +96,7 @@ export default function GoogleSignInButton({
       logo_alignment: "left",
       width: 320,
     });
-  }, [scriptReady, onSuccess, onError]);
+  }, [scriptReady]);
 
   return (
     <div className="flex justify-center">

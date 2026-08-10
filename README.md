@@ -1,36 +1,50 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Bomelh Frontend
 
-## Getting Started
+Web publica y panel admin de Bomelh, construido con Next.js App Router.
 
-First, run the development server:
+## Requisitos
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- Node 22
+- Backend disponible en `NEXT_PUBLIC_API_URL`
+
+`.env.local` minimo:
+
+```env
+NEXT_PUBLIC_API_URL=http://localhost:3000
+NEXT_PUBLIC_GRAPHQL_URL=http://localhost:3000/graphql
+NEXT_PUBLIC_SHARE_URL=http://localhost:3001
+NEXT_PUBLIC_GOOGLE_CLIENT_ID=xxx.apps.googleusercontent.com
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Desarrollo
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm ci
+npm run dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Por defecto corre en `http://localhost:3001`.
 
-## Learn More
+## Verificacion
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+npx tsc --noEmit
+npm run build
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+El build usa fuentes del sistema para no depender de Google Fonts durante CI/deploy.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Areas Principales
 
-## Deploy on Vercel
+- `src/app/(shop)`: experiencia publica del marketplace.
+- `src/app/admin`: panel admin.
+- `src/components`: UI compartida.
+- `src/graphql`: queries y mutations.
+- `src/hooks`: estado remoto y flujos de producto.
+- `src/lib`: configuracion, formato y utilidades.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Deploy
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+El deploy se ejecuta por GitHub Actions en push a `main`. La imagen Docker usa `output: "standalone"` y hornea los `NEXT_PUBLIC_*` en build time.
+
+Ver `../docs/DEPLOYMENT.md` y `../docs/SMOKE_TESTS.md`.

@@ -27,6 +27,7 @@ import { CREATE_PRODUCT } from "@/graphql/mutations";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { uploadImages } from "@/lib/upload";
+import { optimizeImage } from "@/lib/imageOptimizer";
 import { getErrorMessage } from "@/lib/errors";
 import Spinner from "@/components/Spinner";
 import type { CategoryTreeNode } from "@/lib/types";
@@ -43,31 +44,31 @@ const KIND_META: Record<
 > = {
   MarketPlace: {
     label: "MarketPlace",
-    subtitle: "Productos generales",
+    subtitle: "Vende artículos nuevos o de segunda mano",
     Icon: ShoppingBag,
     color: "#14b8a6",
   },
   vehiculos: {
     label: "Vehiculos",
-    subtitle: "Coches, motos y mas",
+    subtitle: "Coches, motos, camiones y más",
     Icon: Car,
     color: "#3b82f6",
   },
   inmobiliaria: {
     label: "Inmobiliaria",
-    subtitle: "Pisos, casas y locales",
+    subtitle: "Pisos, casas, locales y terrenos",
     Icon: Building2,
     color: "#f59e0b",
   },
   servicios: {
     label: "Servicios",
-    subtitle: "Ofrece o busca servicios",
+    subtitle: "Ofrece tu trabajo o profesionalidad o busca servicios",
     Icon: Wrench,
     color: "#8b5cf6",
   },
   empleo: {
     label: "Empleo",
-    subtitle: "Ofertas de trabajo",
+    subtitle: "Publica una oferta o búscala",
     Icon: Briefcase,
     color: "#22c55e",
   },
@@ -119,10 +120,10 @@ function getMissingFields(kind: Kind, form: FormState): string[] {
   };
 
   if (!form.photos || form.photos.length === 0) missing.push("Fotos");
-  check(form.categoryId, "Categoria");
-  check(form.title, "Titulo");
-  check(form.description, "Descripcion");
-  check(form.city, "Ubicacion");
+  check(form.categoryId, "Categoría");
+  check(form.title, "Título");
+  check(form.description, "Descripción");
+  check(form.city, "Ubicación");
 
   switch (kind) {
     case "MarketPlace":
@@ -193,7 +194,7 @@ export default function PostPage() {
           </div>
           <h2 className="text-xl font-extrabold">Publica tu anuncio</h2>
           <p className="mx-auto mt-2 max-w-[280px] text-sm text-on-surface-variant">
-            Inicia sesion para publicar anuncios y empezar a vender en Market
+            Inicia sesión para publicar anuncios y empezar a vender en Market
             EG.
           </p>
           <Link
@@ -201,7 +202,7 @@ export default function PostPage() {
             className="mt-5 inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-bold text-on-primary transition hover:opacity-90"
           >
             <LogIn size={18} strokeWidth={2} />
-            Iniciar sesion
+            Iniciar sesión
           </Link>
         </div>
       </div>
@@ -218,7 +219,7 @@ export default function PostPage() {
         <h1 className="mt-6 text-2xl font-extrabold tracking-tight">
           Publicar anuncio
         </h1>
-        <p className="mt-1 text-sm text-muted">Que quieres publicar hoy?</p>
+        <p className="mt-1 text-sm text-muted">¿Qué quieres publicar hoy?</p>
 
         <div className="mt-6 space-y-3">
           {(Object.keys(KIND_META) as Kind[]).map((k) => {
@@ -286,10 +287,10 @@ export default function PostPage() {
           </button>
           <div>
             <h1 className="text-xl font-extrabold tracking-tight">
-              Categoria
+              Categoría
             </h1>
             <p className="text-sm text-muted">
-              Elige la categoria de tu anuncio
+              Elige la categoría de tu anuncio
             </p>
           </div>
         </div>
@@ -323,7 +324,7 @@ export default function PostPage() {
     const limit = profile?.maxActiveProducts;
     if (limit != null && myProducts.length >= limit) {
       setError(
-        `Tu plan ${PLAN_NAMES[plan] ?? plan} permite hasta ${limit} anuncios activos. Mejora tu plan para publicar mas.`,
+        `Tu plan ${PLAN_NAMES[plan] ?? plan} permite hasta ${limit} anuncios activos. Mejora tu plan para publicar más.`,
       );
       return;
     }
@@ -359,10 +360,19 @@ export default function PostPage() {
 
       if (form.categoryId) input.categoryId = form.categoryId;
 
-      if (kind === "MarketPlace" && (form.brand || form.model)) {
+      const colorsArr: string[] | undefined =
+        Array.isArray(form.colors) && form.colors.length > 0
+          ? form.colors
+          : undefined;
+
+      if (
+        kind === "MarketPlace" &&
+        (form.brand || form.model || colorsArr)
+      ) {
         input.marketplaceDetail = {
           brand: form.brand || undefined,
           model: form.model || undefined,
+          colors: colorsArr,
         };
       } else if (kind === "vehiculos") {
         input.vehicleDetail = {
@@ -373,6 +383,7 @@ export default function PostPage() {
           kilometrage: form.kilometrage ? parseInt(form.kilometrage) : undefined,
           transmission: form.transmission || undefined,
           engine: form.engine || undefined,
+          colors: colorsArr,
         };
       } else if (kind === "inmobiliaria") {
         input.propertyDetail = {
@@ -487,7 +498,7 @@ export default function PostPage() {
 // ─────────────────────────────────────────────────────────────────────────────
 
 function StepProgress({ current }: { current: 1 | 2 | 3 }) {
-  const labels = ["Tipo", "Categoria", "Detalles"];
+  const labels = ["Tipo", "Categoría", "Detalles"];
   return (
     <div className="flex items-center gap-2">
       {labels.map((label, i) => {
@@ -598,7 +609,7 @@ function CategoryPicker({
                   className="flex w-full items-center justify-between px-4 py-3 text-left transition hover:bg-surface-container/40"
                 >
                   <span className="text-sm text-on-surface-variant">
-                    Toda la categoria &laquo;{root.label}&raquo;
+                    Toda la categoría &laquo;{root.label}&raquo;
                   </span>
                 </button>
                 {root.children!.map((child) => {
@@ -657,17 +668,36 @@ function PhotoPicker({
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
+  const [optimizing, setOptimizing] = useState(0);
 
   const previews = useMemo(
     () => photos.map((f) => URL.createObjectURL(f)),
     [photos],
   );
 
-  const addFiles = (files: FileList | File[]) => {
+  const addFiles = async (files: FileList | File[]) => {
     const arr = Array.from(files).filter((f) => f.type.startsWith("image/"));
     const room = maxPhotos - photos.length;
-    if (arr.length === 0) return;
-    setPhotos([...photos, ...arr.slice(0, room)]);
+    if (arr.length === 0 || room <= 0) return;
+    const toProcess = arr.slice(0, room);
+
+    // Optimize each picked file (resize to 1600px max side + JPEG q=0.85)
+    // before adding it to state. A 12 MP phone photo of ~5 MB comes out
+    // ~300–500 KB — well under the backend cap — and the preview shown
+    // below is the optimized version, so what the user sees is what gets
+    // uploaded.
+    setOptimizing(toProcess.length);
+    const optimized: File[] = [];
+    for (const f of toProcess) {
+      try {
+        optimized.push(await optimizeImage(f));
+      } catch {
+        optimized.push(f);
+      }
+      setOptimizing((n) => Math.max(0, n - 1));
+    }
+    setPhotos([...photos, ...optimized]);
+    setOptimizing(0);
   };
 
   const removePhoto = (i: number) => {
@@ -734,18 +764,30 @@ function PhotoPicker({
               setDragOver(false);
               addFiles(e.dataTransfer.files);
             }}
+            disabled={optimizing > 0}
             className={`flex h-24 w-24 flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed transition ${
               dragOver
                 ? "border-primary bg-primary/10"
                 : showErrors && photos.length === 0
                   ? "border-red-400 bg-red-50 dark:bg-red-900/10"
                   : "border-primary/40 bg-primary/5 hover:border-primary/60"
-            }`}
+            } disabled:opacity-60`}
           >
-            <Upload size={20} strokeWidth={1.5} className="text-primary" />
-            <span className="text-[11px] font-semibold text-primary">
-              Anadir
-            </span>
+            {optimizing > 0 ? (
+              <>
+                <Spinner size={18} />
+                <span className="text-[11px] font-semibold text-primary">
+                  Optimizando…
+                </span>
+              </>
+            ) : (
+              <>
+                <Upload size={20} strokeWidth={1.5} className="text-primary" />
+                <span className="text-[11px] font-semibold text-primary">
+                  Anadir
+                </span>
+              </>
+            )}
           </button>
         )}
       </div>
@@ -836,10 +878,121 @@ interface FormProps {
   showErrors?: boolean;
 }
 
+/**
+ * Multi-color picker used by MarketPlace + Vehículos. Stores a list of hex
+ * strings on `form.colors`. Uses the native `<input type="color">` picker
+ * so we don't ship a heavy HSV widget — the user can also type a hex
+ * manually. Chips show what's picked and can be removed individually.
+ */
+function ColorsField({
+  form,
+  setField,
+  hint,
+}: {
+  form: FormState;
+  setField: (k: string, v: any) => void;
+  hint?: string;
+}) {
+  const colors: string[] = Array.isArray(form.colors) ? form.colors : [];
+  const [draft, setDraft] = useState<string>("#000000");
+  const [hexInput, setHexInput] = useState<string>("");
+
+  const add = (raw: string) => {
+    const withHash = raw.startsWith("#") ? raw : `#${raw}`;
+    if (!/^#[0-9a-fA-F]{6}$/.test(withHash)) return;
+    const upper = withHash.toUpperCase();
+    if (colors.includes(upper)) return;
+    setField("colors", [...colors, upper]);
+    setHexInput("");
+  };
+
+  const remove = (idx: number) => {
+    const next = colors.filter((_, i) => i !== idx);
+    setField("colors", next);
+  };
+
+  return (
+    <Field label="Colores" >
+      {colors.length > 0 && (
+        <div className="mb-3 flex flex-wrap gap-2">
+          {colors.map((c, i) => (
+            <span
+              key={`${c}-${i}`}
+              className="inline-flex items-center gap-2 rounded-full border border-outline-variant/40 bg-surface-lowest py-1 pl-1.5 pr-2 text-xs font-semibold text-on-surface"
+            >
+              <span
+                className="h-5 w-5 rounded-full border border-black/10"
+                style={{ backgroundColor: c }}
+                aria-hidden
+              />
+              <span className="tabular-nums">{c}</span>
+              <button
+                type="button"
+                onClick={() => remove(i)}
+                aria-label={`Quitar ${c}`}
+                className="grid h-4 w-4 place-items-center rounded-full text-muted transition hover:bg-danger/15 hover:text-danger"
+              >
+                ×
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+
+      <div className="flex flex-wrap items-center gap-3">
+        <label className="relative inline-flex h-10 w-14 cursor-pointer overflow-hidden rounded-lg border border-outline-variant/40">
+          <input
+            type="color"
+            value={draft}
+            onChange={(ev) => setDraft(ev.target.value)}
+            className="absolute inset-0 h-full w-full cursor-pointer border-0 p-0"
+            aria-label="Selector de color"
+          />
+        </label>
+        <button
+          type="button"
+          onClick={() => add(draft)}
+          className="rounded-lg bg-primary/10 px-3 py-2 text-xs font-bold text-primary transition hover:bg-primary/20"
+        >
+          + Añadir color
+        </button>
+
+        <div className="flex items-center gap-2">
+          <input
+            value={hexInput}
+            onChange={(ev) => setHexInput(ev.target.value.toUpperCase())}
+            onKeyDown={(ev) => {
+              if (ev.key === "Enter") {
+                ev.preventDefault();
+                add(hexInput);
+              }
+            }}
+            placeholder="#RRGGBB"
+            maxLength={7}
+            className="w-24 rounded-lg border border-outline-variant/40 bg-surface-lowest px-2 py-2 text-xs font-semibold uppercase tabular-nums outline-none focus:border-primary"
+          />
+          <button
+            type="button"
+            onClick={() => add(hexInput)}
+            className="rounded-lg bg-surface-container px-3 py-2 text-xs font-semibold text-on-surface transition hover:bg-surface-high"
+          >
+            Añadir
+          </button>
+        </div>
+      </div>
+
+      <p className="mt-1.5 text-[11px] text-muted">
+        {hint ??
+          "Puedes añadir varios colores. Ayuda a los compradores a encontrar tu anuncio."}
+      </p>
+    </Field>
+  );
+}
+
 function MarketPlaceForm({ form, setField, showErrors: e }: FormProps) {
   return (
     <>
-      <Field label="Titulo" required error={e && !form.title}>
+      <Field label="Título" required error={e && !form.title}>
         <input
           value={form.title ?? ""}
           onChange={(ev) => setField("title", ev.target.value)}
@@ -848,7 +1001,7 @@ function MarketPlaceForm({ form, setField, showErrors: e }: FormProps) {
         />
       </Field>
 
-      <Field label="Descripcion" required error={e && !form.description}>
+      <Field label="Descripción" required error={e && !form.description}>
         <textarea
           value={form.description ?? ""}
           onChange={(ev) => setField("description", ev.target.value)}
@@ -880,6 +1033,8 @@ function MarketPlaceForm({ form, setField, showErrors: e }: FormProps) {
           />
         </Field>
       </div>
+
+      <ColorsField form={form} setField={setField} />
 
       <Field label="Estado" required error={e && !form.condition}>
         <select
@@ -920,7 +1075,7 @@ function MarketPlaceForm({ form, setField, showErrors: e }: FormProps) {
         </Field>
       </div>
 
-      <Field label="Ubicacion (Ciudad)" required error={e && !form.city}>
+      <Field label="Ubicación (Ciudad)" required error={e && !form.city}>
         <input
           value={form.city ?? ""}
           onChange={(ev) => setField("city", ev.target.value)}
@@ -935,7 +1090,7 @@ function MarketPlaceForm({ form, setField, showErrors: e }: FormProps) {
 function VehiculoForm({ form, setField, showErrors: e }: FormProps) {
   return (
     <>
-      <Field label="Titulo" required error={e && !form.title}>
+      <Field label="Título" required error={e && !form.title}>
         <input
           value={form.title ?? ""}
           onChange={(ev) => setField("title", ev.target.value)}
@@ -944,7 +1099,7 @@ function VehiculoForm({ form, setField, showErrors: e }: FormProps) {
         />
       </Field>
 
-      <Field label="Descripcion" required error={e && !form.description}>
+      <Field label="Descripción" required error={e && !form.description}>
         <textarea
           value={form.description ?? ""}
           onChange={(ev) => setField("description", ev.target.value)}
@@ -959,7 +1114,7 @@ function VehiculoForm({ form, setField, showErrors: e }: FormProps) {
       </Field>
 
       <div className="grid grid-cols-2 gap-4">
-        <Field label="Operacion">
+        <Field label="Operación">
           <select
             value={form.operation ?? ""}
             onChange={(ev) => setField("operation", ev.target.value)}
@@ -1009,7 +1164,7 @@ function VehiculoForm({ form, setField, showErrors: e }: FormProps) {
       </div>
 
       <div className="grid grid-cols-2 gap-4">
-        <Field label="Ano">
+        <Field label="Año">
           <input
             type="number"
             min={1900}
@@ -1063,6 +1218,12 @@ function VehiculoForm({ form, setField, showErrors: e }: FormProps) {
         </Field>
       </div>
 
+      <ColorsField
+        form={form}
+        setField={setField}
+        hint="Añade los colores del vehículo (carrocería, tapicería…)."
+      />
+
       <div className="grid grid-cols-2 gap-4">
         <Field label="Precio (XAF)">
           <input
@@ -1087,7 +1248,7 @@ function VehiculoForm({ form, setField, showErrors: e }: FormProps) {
         </Field>
       </div>
 
-      <Field label="Ubicacion (Ciudad)" required error={e && !form.city}>
+      <Field label="Ubicación (Ciudad)" required error={e && !form.city}>
         <input
           value={form.city ?? ""}
           onChange={(ev) => setField("city", ev.target.value)}
@@ -1102,7 +1263,7 @@ function VehiculoForm({ form, setField, showErrors: e }: FormProps) {
 function ServicioForm({ form, setField, showErrors: e }: FormProps) {
   return (
     <>
-      <Field label="Titulo" required error={e && !form.title}>
+      <Field label="Título" required error={e && !form.title}>
         <input
           value={form.title ?? ""}
           onChange={(ev) => setField("title", ev.target.value)}
@@ -1111,7 +1272,7 @@ function ServicioForm({ form, setField, showErrors: e }: FormProps) {
         />
       </Field>
 
-      <Field label="Descripcion" required error={e && !form.description}>
+      <Field label="Descripción" required error={e && !form.description}>
         <textarea
           value={form.description ?? ""}
           onChange={(ev) => setField("description", ev.target.value)}
@@ -1164,7 +1325,7 @@ function ServicioForm({ form, setField, showErrors: e }: FormProps) {
         </Field>
       </div>
 
-      <Field label="Ubicacion (Ciudad)" required error={e && !form.city}>
+      <Field label="Ubicación (Ciudad)" required error={e && !form.city}>
         <input
           value={form.city ?? ""}
           onChange={(ev) => setField("city", ev.target.value)}
@@ -1179,7 +1340,7 @@ function ServicioForm({ form, setField, showErrors: e }: FormProps) {
 function InmobiliariaForm({ form, setField, showErrors: e }: FormProps) {
   return (
     <>
-      <Field label="Titulo" required error={e && !form.title}>
+      <Field label="Título" required error={e && !form.title}>
         <input
           value={form.title ?? ""}
           onChange={(ev) => setField("title", ev.target.value)}
@@ -1188,11 +1349,11 @@ function InmobiliariaForm({ form, setField, showErrors: e }: FormProps) {
         />
       </Field>
 
-      <Field label="Descripcion" required error={e && !form.description}>
+      <Field label="Descripción" required error={e && !form.description}>
         <textarea
           value={form.description ?? ""}
           onChange={(ev) => setField("description", ev.target.value)}
-          placeholder="Superficie, planta, ano, caracteristicas..."
+          placeholder="Superficie, planta, año, características..."
           maxLength={500}
           rows={4}
           className={`${inputCls} h-auto resize-none py-3`}
@@ -1202,7 +1363,7 @@ function InmobiliariaForm({ form, setField, showErrors: e }: FormProps) {
         </p>
       </Field>
 
-      <Field label="Operacion">
+      <Field label="Operación">
         <select
           value={form.operation ?? ""}
           onChange={(ev) => setField("operation", ev.target.value)}
@@ -1243,7 +1404,7 @@ function InmobiliariaForm({ form, setField, showErrors: e }: FormProps) {
             onChange={(v) => setField("bedrooms", v)}
           />
         </Field>
-        <Field label="Banos">
+        <Field label="Baños">
           <Stepper
             value={form.bathrooms ?? 0}
             onChange={(v) => setField("bathrooms", v)}
@@ -1303,7 +1464,7 @@ function InmobiliariaForm({ form, setField, showErrors: e }: FormProps) {
         />
       </Field>
 
-      <Field label="Ubicacion (Ciudad)" required error={e && !form.city}>
+      <Field label="Ubicación (Ciudad)" required error={e && !form.city}>
         <input
           value={form.city ?? ""}
           onChange={(ev) => setField("city", ev.target.value)}
@@ -1318,7 +1479,7 @@ function InmobiliariaForm({ form, setField, showErrors: e }: FormProps) {
 function EmpleoForm({ form, setField, showErrors: e }: FormProps) {
   return (
     <>
-      <Field label="Titulo" required error={e && !form.title}>
+      <Field label="Título" required error={e && !form.title}>
         <input
           value={form.title ?? ""}
           onChange={(ev) => setField("title", ev.target.value)}
@@ -1327,7 +1488,7 @@ function EmpleoForm({ form, setField, showErrors: e }: FormProps) {
         />
       </Field>
 
-      <Field label="Descripcion" required error={e && !form.description}>
+      <Field label="Descripción" required error={e && !form.description}>
         <textarea
           value={form.description ?? ""}
           onChange={(ev) => setField("description", ev.target.value)}
@@ -1351,18 +1512,7 @@ function EmpleoForm({ form, setField, showErrors: e }: FormProps) {
         />
       </Field>
 
-      <Field label="Precio (XAF)">
-        <input
-          type="number"
-          min={0}
-          value={form.price ?? ""}
-          onChange={(ev) => setField("price", ev.target.value)}
-          placeholder="0"
-          className={inputCls}
-        />
-      </Field>
-
-      <Field label="Ubicacion (Ciudad)" required error={e && !form.city}>
+      <Field label="Ubicación (Ciudad)" required error={e && !form.city}>
         <input
           value={form.city ?? ""}
           onChange={(ev) => setField("city", ev.target.value)}

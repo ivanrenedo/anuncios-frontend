@@ -466,14 +466,38 @@ export default function ProductDetailModal({
                   {unboosting ? "Quitando…" : "Quitar destacado"}
                 </button>
               ) : (
-                <button
-                  onClick={() => boost({ variables: { id: detail.id, days: 7 } })}
-                  disabled={boosting}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-violet-500/10 px-3 py-2 text-sm font-semibold text-violet-600 transition hover:bg-violet-500/20 disabled:opacity-50"
-                >
-                  <Sparkles size={14} />
-                  {boosting ? "Destacando…" : "Destacar 7 días"}
-                </button>
+                // v2 (Fase 10a.1): selector de duración con las 3 opciones del
+                // briefing v2 (BOOST_PRICES en backend). Cada botón muestra
+                // el precio inline para que el admin sepa qué se registra en
+                // el ledger antes de confirmar.
+                <div className="inline-flex items-center gap-1 rounded-xl bg-violet-500/10 p-1">
+                  <span className="pl-2 pr-1 text-xs font-semibold text-violet-600">
+                    <Sparkles size={13} className="inline-block mr-1" />
+                    Destacar
+                  </span>
+                  {[
+                    { days: 3, xaf: 1000 },
+                    { days: 7, xaf: 2000 },
+                    { days: 30, xaf: 5000 },
+                  ].map(({ days, xaf }) => (
+                    <button
+                      key={days}
+                      onClick={() =>
+                        boost({ variables: { id: detail.id, days } })
+                      }
+                      disabled={boosting}
+                      title={`Destacar ${days} días · ${xaf.toLocaleString(
+                        "es",
+                      )} XAF`}
+                      className="rounded-lg bg-violet-500/15 px-2.5 py-1.5 text-xs font-bold text-violet-600 transition hover:bg-violet-500/30 disabled:opacity-50"
+                    >
+                      {days}d
+                      <span className="ml-1 font-normal opacity-70">
+                        {(xaf / 1000).toFixed(0)}k
+                      </span>
+                    </button>
+                  ))}
+                </div>
               )}
               <button
                 onClick={onToggleStatus}

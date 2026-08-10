@@ -4,38 +4,33 @@ import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
-  Camera,
   Save,
   Loader2,
   User,
   ImageIcon,
+  Mail,
+  Phone,
+  Lock,
 } from "lucide-react";
 import { useProfile } from "@/hooks/useProfile";
 import { useAuth } from "@/hooks/useAuth";
 import { uploadImage } from "@/lib/upload";
+import { optimizeImage } from "@/lib/imageOptimizer";
 import { resolveImage } from "@/lib/config";
+import PhoneVerificationModal from "@/components/PhoneVerificationModal";
 import Link from "next/link";
 
 export default function EditProfilePage() {
   const router = useRouter();
-  const { isAuthenticated, loading: authLoading } = useAuth();
+  const { user, isAuthenticated, loading: authLoading } = useAuth();
   const { profile, updateProfile } = useProfile();
 
   const [name, setName] = useState("");
   const [bio, setBio] = useState("");
   const [location, setLocation] = useState("");
-  const [language, setLanguage] = useState("es");
-  const [showEmail, setShowEmail] = useState(false);
-  const [showPhone, setShowPhone] = useState(false);
-  const [notifMessages, setNotifMessages] = useState(true);
-  const [notifOffers, setNotifOffers] = useState(true);
-  const [notifMarketing, setNotifMarketing] = useState(false);
-  const [themePreference, setThemePreference] = useState("system");
 
   const [avatarPreview, setAvatarPreview] = useState("");
   const [coverPreview, setCoverPreview] = useState("");
-  const [avatarFile, setAvatarFile] = useState<File | null>(null);
-  const [coverFile, setCoverFile] = useState<File | null>(null);
 
   const [saving, setSaving] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -43,22 +38,17 @@ export default function EditProfilePage() {
   const [successMsg, setSuccessMsg] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
 
+  const [phoneOpen, setPhoneOpen] = useState(false);
+
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
 
-  // Populate form when profile loads
+  // Populate form when profile loads.
   useEffect(() => {
     if (profile) {
       setName(profile.name || "");
       setBio(profile.bio || "");
       setLocation(profile.location || "");
-      setLanguage(profile.language || "es");
-      setShowEmail(profile.showEmail ?? false);
-      setShowPhone(profile.showPhone ?? false);
-      setNotifMessages(profile.notifMessages ?? true);
-      setNotifOffers(profile.notifOffers ?? true);
-      setNotifMarketing(profile.notifMarketing ?? false);
-      setThemePreference(profile.themePreference || "system");
       setAvatarPreview(resolveImage(profile.avatarUrl));
       setCoverPreview(resolveImage(profile.coverUrl));
     }
@@ -81,20 +71,69 @@ export default function EditProfilePage() {
     );
   }
 
-  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Auto-save avatar: pick → optimize → upload → PATCH avatarUrl. If the
+  // upload succeeds but persistence fails, we surface the error and roll the
+  // preview back to whatever the server currently has, so UI and server can't
+  // drift silently. Same shape as the mobile flow.
+  const handleAvatarChange = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     const file = e.target.files?.[0];
+    // Reset the input so picking the same file again refires change.
+    if (e.target) e.target.value = "";
     if (!file) return;
-    setAvatarFile(file);
-    setAvatarPreview(URL.createObjectURL(file));
+    setErrorMsg("");
+    setUploadingAvatar(true);
+    const previousUrl = profile?.avatarUrl || "";
+    try {
+      const optimized = await optimizeImage(file, {
+        maxDim: 800,
+        quality: 0.9,
+        targetAspect: 1,
+      });
+      setAvatarPreview(URL.createObjectURL(optimized));
+      const url = await uploadImage(optimized);
+      await updateProfile({ avatarUrl: url });
+      setSuccessMsg("Foto de perfil actualizada.");
+      setTimeout(() => setSuccessMsg(""), 2500);
+    } catch (err: any) {
+      setAvatarPreview(resolveImage(previousUrl));
+      setErrorMsg(err?.message || "No se pudo actualizar la foto de perfil.");
+    } finally {
+      setUploadingAvatar(false);
+    }
   };
 
-  const handleCoverChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCoverChange = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     const file = e.target.files?.[0];
+    if (e.target) e.target.value = "";
     if (!file) return;
-    setCoverFile(file);
-    setCoverPreview(URL.createObjectURL(file));
+    setErrorMsg("");
+    setUploadingCover(true);
+    const previousUrl = profile?.coverUrl || "";
+    try {
+      const optimized = await optimizeImage(file, {
+        maxDim: 1600,
+        quality: 0.85,
+        targetAspect: 16 / 9,
+      });
+      setCoverPreview(URL.createObjectURL(optimized));
+      const url = await uploadImage(optimized);
+      await updateProfile({ coverUrl: url });
+      setSuccessMsg("Foto de portada actualizada.");
+      setTimeout(() => setSuccessMsg(""), 2500);
+    } catch (err: any) {
+      setCoverPreview(resolveImage(previousUrl));
+      setErrorMsg(err?.message || "No se pudo actualizar la foto de portada.");
+    } finally {
+      setUploadingCover(false);
+    }
   };
 
+  // Text fields still batch under Guardar so a partial edit doesn't spam
+  // the server; images and toggles auto-save above.
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
@@ -102,45 +141,14 @@ export default function EditProfilePage() {
     setErrorMsg("");
 
     try {
-      let avatarUrl = profile?.avatarUrl || undefined;
-      let coverUrl = profile?.coverUrl || undefined;
-
-      // Upload new avatar if selected
-      if (avatarFile) {
-        setUploadingAvatar(true);
-        avatarUrl = await uploadImage(avatarFile);
-        setUploadingAvatar(false);
-      }
-
-      // Upload new cover if selected
-      if (coverFile) {
-        setUploadingCover(true);
-        coverUrl = await uploadImage(coverFile);
-        setUploadingCover(false);
-      }
-
       await updateProfile({
         name: name.trim(),
         bio: bio.trim(),
         location: location.trim(),
-        language,
-        showEmail,
-        showPhone,
-        notifMessages,
-        notifOffers,
-        notifMarketing,
-        themePreference,
-        ...(avatarUrl !== undefined ? { avatarUrl } : {}),
-        ...(coverUrl !== undefined ? { coverUrl } : {}),
       });
-
-      setAvatarFile(null);
-      setCoverFile(null);
       setSuccessMsg("Perfil actualizado correctamente.");
       setTimeout(() => setSuccessMsg(""), 4000);
     } catch (err: any) {
-      setUploadingAvatar(false);
-      setUploadingCover(false);
       setErrorMsg(err?.message || "Error al guardar los cambios.");
     } finally {
       setSaving(false);
@@ -158,13 +166,18 @@ export default function EditProfilePage() {
 
       <h1 className="text-2xl font-extrabold tracking-tight">Editar perfil</h1>
       <p className="mt-1 text-sm text-muted">
-        Actualiza tu información personal y preferencias.
+        Actualiza tu información personal. Las preferencias de notificaciones,
+        privacidad e idioma están en{" "}
+        <span className="font-semibold text-on-surface">Ajustes</span> desde tu
+        perfil.
       </p>
 
       <form onSubmit={handleSave} className="mt-6 space-y-8">
         {/* Cover photo */}
         <div>
-          <label className="text-sm font-bold text-on-surface">Foto de portada</label>
+          <label className="text-sm font-bold text-on-surface">
+            Foto de portada
+          </label>
           <div
             onClick={() => coverInputRef.current?.click()}
             className="relative mt-2 h-36 cursor-pointer overflow-hidden rounded-2xl border-2 border-dashed border-outline-variant/50 transition hover:border-primary sm:h-48"
@@ -182,9 +195,6 @@ export default function EditProfilePage() {
                 <span className="text-sm">Haz clic para subir</span>
               </div>
             )}
-            <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition hover:bg-black/30">
-              <Camera size={28} className="text-white opacity-0 transition group-hover:opacity-100" />
-            </div>
             {uploadingCover && (
               <div className="absolute inset-0 flex items-center justify-center bg-black/40">
                 <Loader2 size={28} className="animate-spin text-white" />
@@ -202,7 +212,9 @@ export default function EditProfilePage() {
 
         {/* Avatar */}
         <div>
-          <label className="text-sm font-bold text-on-surface">Foto de perfil</label>
+          <label className="text-sm font-bold text-on-surface">
+            Foto de perfil
+          </label>
           <div className="mt-2 flex items-center gap-4">
             <div
               onClick={() => avatarInputRef.current?.click()}
@@ -221,7 +233,7 @@ export default function EditProfilePage() {
                 </div>
               )}
               {uploadingAvatar && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-full">
+                <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40">
                   <Loader2 size={20} className="animate-spin text-white" />
                 </div>
               )}
@@ -269,9 +281,11 @@ export default function EditProfilePage() {
             value={bio}
             onChange={(e) => setBio(e.target.value)}
             rows={3}
+            maxLength={350}
             className="mt-1 w-full resize-none rounded-xl border border-outline-variant/50 bg-surface-lowest px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
             placeholder="Cuéntanos sobre ti..."
           />
+          <p className="mt-1 text-xs text-muted">{350 - bio.length} caracteres restantes</p>
         </div>
 
         {/* Location */}
@@ -289,82 +303,55 @@ export default function EditProfilePage() {
           />
         </div>
 
-        {/* Language */}
+        {/* Email — read-only. Users can't change it directly; contact support
+            (or re-sign-in with a different Google account) if they need to. */}
         <div>
-          <label htmlFor="language" className="text-sm font-bold text-on-surface">
-            Idioma
+          <label htmlFor="email" className="flex items-center gap-1.5 text-sm font-bold text-on-surface">
+            <Mail size={14} /> Email
+            <span className="ml-1 inline-flex items-center gap-1 rounded-full bg-surface-container px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted">
+              <Lock size={9} /> No editable
+            </span>
           </label>
-          <select
-            id="language"
-            value={language}
-            onChange={(e) => setLanguage(e.target.value)}
-            className="mt-1 w-full rounded-xl border border-outline-variant/50 bg-surface-lowest px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-          >
-            <option value="es">Español</option>
-            <option value="fr">Francés</option>
-            <option value="en">Inglés</option>
-          </select>
+          <input
+            id="email"
+            type="email"
+            value={profile?.email ?? user?.email ?? ""}
+            disabled
+            readOnly
+            className="mt-1 w-full cursor-not-allowed rounded-xl border border-outline-variant/40 bg-surface-container px-4 py-2.5 text-sm text-muted"
+          />
+          <p className="mt-1 text-xs text-muted">
+            El email está vinculado a tu cuenta. Si necesitas cambiarlo,
+            contacta con soporte.
+          </p>
         </div>
 
-        {/* Privacy section */}
-        <fieldset className="rounded-2xl border border-outline-variant/30 p-5">
-          <legend className="px-2 text-sm font-bold text-on-surface">Privacidad</legend>
-          <div className="space-y-4">
-            <Toggle
-              label="Mostrar email"
-              description="Otros usuarios podrán ver tu email en tu perfil"
-              checked={showEmail}
-              onChange={setShowEmail}
-            />
-            <Toggle
-              label="Mostrar teléfono"
-              description="Otros usuarios podrán ver tu teléfono en tu perfil"
-              checked={showPhone}
-              onChange={setShowPhone}
-            />
-          </div>
-        </fieldset>
-
-        {/* Notifications section */}
-        <fieldset className="rounded-2xl border border-outline-variant/30 p-5">
-          <legend className="px-2 text-sm font-bold text-on-surface">Notificaciones</legend>
-          <div className="space-y-4">
-            <Toggle
-              label="Mensajes"
-              description="Recibir notificaciones de mensajes"
-              checked={notifMessages}
-              onChange={setNotifMessages}
-            />
-            <Toggle
-              label="Ofertas"
-              description="Recibir notificaciones sobre ofertas en tus productos"
-              checked={notifOffers}
-              onChange={setNotifOffers}
-            />
-            <Toggle
-              label="Marketing"
-              description="Recibir novedades y promociones de Bomelh"
-              checked={notifMarketing}
-              onChange={setNotifMarketing}
-            />
-          </div>
-        </fieldset>
-
-        {/* Theme */}
+        {/* Phone — change trigger */}
         <div>
-          <label htmlFor="theme" className="text-sm font-bold text-on-surface">
-            Tema
+          <label className="flex items-center gap-1.5 text-sm font-bold text-on-surface">
+            <Phone size={14} /> Teléfono
           </label>
-          <select
-            id="theme"
-            value={themePreference}
-            onChange={(e) => setThemePreference(e.target.value)}
-            className="mt-1 w-full rounded-xl border border-outline-variant/50 bg-surface-lowest px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-          >
-            <option value="system">Sistema</option>
-            <option value="light">Claro</option>
-            <option value="dark">Oscuro</option>
-          </select>
+          <div className="mt-1 flex flex-col gap-2 sm:flex-row sm:items-center">
+            <input
+              type="tel"
+              value={profile?.phone ?? user?.phone ?? ""}
+              disabled
+              readOnly
+              placeholder="Sin teléfono verificado"
+              className="w-full cursor-not-allowed rounded-xl border border-outline-variant/40 bg-surface-container px-4 py-2.5 text-sm text-muted"
+            />
+            <button
+              type="button"
+              onClick={() => setPhoneOpen(true)}
+              className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-on-primary transition hover:bg-primary/90 sm:whitespace-nowrap"
+            >
+              <Phone size={14} />
+              {user?.phone ? "Cambiar" : "Verificar"}
+            </button>
+          </div>
+          <p className="mt-1 text-xs text-muted">
+            Necesitarás verificar el nuevo número con un código SMS.
+          </p>
         </div>
 
         {/* Success / Error messages */}
@@ -402,42 +389,10 @@ export default function EditProfilePage() {
           </button>
         </div>
       </form>
-    </div>
-  );
-}
 
-function Toggle({
-  label,
-  description,
-  checked,
-  onChange,
-}: {
-  label: string;
-  description: string;
-  checked: boolean;
-  onChange: (v: boolean) => void;
-}) {
-  return (
-    <div className="flex items-center justify-between gap-4">
-      <div>
-        <p className="text-sm font-semibold text-on-surface">{label}</p>
-        <p className="text-xs text-muted">{description}</p>
-      </div>
-      <button
-        type="button"
-        role="switch"
-        aria-checked={checked}
-        onClick={() => onChange(!checked)}
-        className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${
-          checked ? "bg-primary" : "bg-outline-variant/50"
-        }`}
-      >
-        <span
-          className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${
-            checked ? "translate-x-6" : "translate-x-1"
-          }`}
-        />
-      </button>
+      {phoneOpen && (
+        <PhoneVerificationModal onClose={() => setPhoneOpen(false)} />
+      )}
     </div>
   );
 }

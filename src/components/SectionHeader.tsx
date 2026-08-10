@@ -7,11 +7,13 @@ export default function SectionHeader({
   subtitle,
   icon,
   href,
+  onClick,
 }: {
-  title: string;
+  title: ReactNode;
   subtitle?: string;
   icon?: ReactNode;
   href?: string;
+  onClick?: () => void;
 }) {
   return (
     <div className="mb-4 flex items-end justify-between px-4 sm:px-6">
@@ -25,6 +27,7 @@ export default function SectionHeader({
       {href && (
         <Link
           href={href}
+          onClick={onClick}
           className="hidden shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold text-on-surface-variant transition hover:bg-surface-container hover:text-on-surface sm:flex"
         >
           Ver todos

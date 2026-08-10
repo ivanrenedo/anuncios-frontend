@@ -1,5 +1,45 @@
 @import "tailwindcss";
 
+@font-face {
+  font-family: "Manrope";
+  src: url("/fonts/manrope/Manrope-Regular.ttf") format("truetype");
+  font-display: swap;
+  font-style: normal;
+  font-weight: 400;
+}
+
+@font-face {
+  font-family: "Manrope";
+  src: url("/fonts/manrope/Manrope-Medium.ttf") format("truetype");
+  font-display: swap;
+  font-style: normal;
+  font-weight: 500;
+}
+
+@font-face {
+  font-family: "Manrope";
+  src: url("/fonts/manrope/Manrope-SemiBold.ttf") format("truetype");
+  font-display: swap;
+  font-style: normal;
+  font-weight: 600;
+}
+
+@font-face {
+  font-family: "Manrope";
+  src: url("/fonts/manrope/Manrope-Bold.ttf") format("truetype");
+  font-display: swap;
+  font-style: normal;
+  font-weight: 700;
+}
+
+@font-face {
+  font-family: "Manrope";
+  src: url("/fonts/manrope/Manrope-ExtraBold.ttf") format("truetype");
+  font-display: swap;
+  font-style: normal;
+  font-weight: 800;
+}
+
 /*
  * Bomelh design system — ported from the mobile app palette
  * (constants/theme.ts). Teal primary, blue secondary, amber tertiary.
@@ -34,7 +74,7 @@
   --color-outline: #6c7a76;
   --color-outline-variant: #bbcac5;
 
-  --font-sans: var(--font-manrope), system-ui, sans-serif;
+  --font-sans: "Manrope", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 
   --radius-card: 16px;
 }

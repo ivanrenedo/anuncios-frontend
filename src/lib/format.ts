@@ -8,11 +8,12 @@ export function formatPrice(value: number | string | null | undefined): string {
 /** Apply a percentage discount to a price. `discount` is 0–100. */
 export function applyDiscount(
   price: number | string | null | undefined,
-  discount?: number | null
+  discount?: number | null,
 ) {
   const original = Number(price) || 0;
   const percent = discount ?? 0;
-  const final = percent > 0 ? Math.round(original * (1 - percent / 100)) : original;
+  const final =
+    percent > 0 ? Math.round(original * (1 - percent / 100)) : original;
   return {
     original,
     final,
@@ -50,4 +51,30 @@ export function formatDate(iso?: string | null): string {
     month: "short",
     year: "numeric",
   });
+}
+
+/** Compact numeric formatter for counters (e.g. "1.234", "12,3 K"). */
+export function formatNumber(
+  value: number | string | null | undefined,
+): string {
+  const n = Number(value ?? 0);
+  if (!Number.isFinite(n)) return "0";
+  if (Math.abs(n) >= 1_000_000_000) {
+    let result = (n / 1_000_000_000)
+      .toFixed(1)
+      .replace(/\.0$/, "")
+      .replace(".", ",");
+    return `${Math.round(Number(result)).toLocaleString("es")} B`;
+  }
+  if (Math.abs(n) >= 1_000_000) {
+    let result = (n / 1_000_000)
+      .toFixed(1)
+      .replace(/\.0$/, "")
+      .replace(".", ",");
+    return `${Math.round(Number(result)).toLocaleString("es")} M`;
+  }
+  if (Math.abs(n) >= 1000) {
+    return `${(n / 1000).toFixed(1).replace(/\.0$/, "").replace(".", ",")} K`;
+  }
+  return Math.round(n).toLocaleString("es");
 }

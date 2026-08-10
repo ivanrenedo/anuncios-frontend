@@ -19,8 +19,11 @@ export const ME = gql`
       suspendedReason
       language
       plan
+      planCycle
+      planStartedAt
       planExpiresAt
       effectivePlan
+      businessVerifiedAt
       maxActiveProducts
       maxImagesPerProduct
       notifMessages
@@ -175,6 +178,7 @@ const PRODUCT_CARD_FIELDS = `
   favoritesCount
   bumpedAt
   boostedUntil
+  priceReducedUntil
   createdAt
   seller {
     id
@@ -236,6 +240,7 @@ export const GET_PRODUCT = gql`
       favoritesCount
       bumpedAt
       boostedUntil
+      priceReducedUntil
       createdAt
       seller {
         id
@@ -247,6 +252,7 @@ export const GET_PRODUCT = gql`
         plan
         phone
         showPhone
+        businessVerifiedAt
       }
       category {
         id
@@ -308,7 +314,7 @@ export const SEARCH_PRODUCTS = gql`
   query SearchProducts($input: SearchProductsInput!) {
     searchProducts(input: $input) {
       ${PRODUCT_CARD_FIELDS}
-      propertyDetail { operation }
+      propertyDetail { operation bedrooms bathrooms surface }
       serviceDetail { offerType }
       vehicleDetail { operation brand model engine transmission }
     }
@@ -563,6 +569,28 @@ export const FOLLOWING_COUNT = gql`
   }
 `;
 
+// ─── Business contact ───────────────────────────────────────────────────────
+
+export const BUSINESS_CONTACT = gql`
+  query BusinessContact {
+    businessContact {
+      phone
+      email
+    }
+  }
+`;
+
+// ─── PREMIUM stats ──────────────────────────────────────────────────────────
+
+export const MY_VIEWS_DAILY = gql`
+  query MyViewsDaily($days: Int) {
+    myViewsDaily(days: $days) {
+      date
+      count
+    }
+  }
+`;
+
 // ─── Saved Searches ──────────────────────────────────────────────────────────
 
 export const MY_SAVED_SEARCHES = gql`
@@ -641,6 +669,29 @@ export const GET_HOME_SECTIONS = gql`
         propertyDetail { operation }
         serviceDetail { offerType }
       }
+    }
+  }
+`;
+
+export const GET_FILTERABLE_SECTIONS = gql`
+  query FilterableSections {
+    filterableSections {
+      id
+      type
+      title
+      icon
+      filter
+    }
+  }
+`;
+
+export const GET_SECTION_PRODUCTS = gql`
+  query SectionProducts($sectionId: String!, $take: Int, $skip: Int) {
+    sectionProducts(sectionId: $sectionId, take: $take, skip: $skip) {
+      ${PRODUCT_CARD_FIELDS}
+      vehicleDetail { operation brand model engine transmission }
+      propertyDetail { operation bedrooms bathrooms surface }
+      serviceDetail { offerType }
     }
   }
 `;
@@ -741,6 +792,7 @@ export const GET_VERIFICATION_REQUESTS = gql`
       id
       userId
       status
+      docs
       rejectedReason
       reviewedAt
       createdAt
@@ -767,9 +819,115 @@ export const MY_VERIFICATION_REQUEST = gql`
     myVerificationRequest {
       id
       status
+      docs
       rejectedReason
       reviewedAt
       createdAt
+    }
+  }
+`;
+
+// ─── Plans v2 — pinned, autobump slots, home Premium carousel ────────────────
+
+export const PINNED_PRODUCTS = gql`
+  query PinnedProducts($userId: String!) {
+    pinnedProducts(userId: $userId) {
+      ${PRODUCT_CARD_FIELDS}
+    }
+  }
+`;
+
+export const MY_AUTO_BUMP_SLOTS = gql`
+  query MyAutoBumpSlots {
+    myAutoBumpSlots {
+      id
+      productId
+      cadence
+      createdAt
+      product {
+        id
+        title
+        images { id url sortOrder type thumbnailUrl }
+      }
+    }
+  }
+`;
+
+export const MY_BOOST_QUOTA = gql`
+  query MyBoostQuota {
+    myBoostQuota {
+      plan
+      includedPerMonth
+      usedThisMonth
+      remainingThisMonth
+      extraDiscountPct
+      cycleStartsAt
+      cycleEndsAt
+    }
+  }
+`;
+
+export const HOME_CAROUSEL_PREMIUM = gql`
+  query HomeCarouselPremium($take: Int) {
+    homeCarouselPremium(take: $take) {
+      ${PRODUCT_CARD_FIELDS}
+    }
+  }
+`;
+
+export const PLAN_ACTIVATIONS = gql`
+  query PlanActivations($userId: String!) {
+    planActivations(userId: $userId) {
+      id
+      plan
+      months
+      unitPrice
+      discountPct
+      totalPaid
+      activatedByAdminId
+      activatedAt
+      startsAt
+      endsAt
+      notes
+    }
+  }
+`;
+
+export const PLAN_TOTAL_PREVIEW = gql`
+  query PlanTotalPreview($plan: UserPlan!, $months: Int!) {
+    planTotalPreview(plan: $plan, months: $months) {
+      plan
+      months
+      unitPrice
+      gross
+      discountPct
+      discountAmount
+      total
+      cheaperAtTwelve {
+        triggered
+        currentTotal
+        yearlyTotal
+        savings
+      }
+    }
+  }
+`;
+
+export const ADMIN_PLAN_STATS = gql`
+  query AdminPlanStats($monthsBack: Int) {
+    adminPlanStats(monthsBack: $monthsBack) {
+      distribution {
+        plan
+        count
+      }
+      activeMrr
+      churnedLast30d
+      expiringNext7d
+      activationsByMonth {
+        month
+        activations
+        revenue
+      }
     }
   }
 `;
