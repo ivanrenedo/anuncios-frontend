@@ -70,13 +70,6 @@ export default function PlanFeaturesPanel({
       </p>
       {limits.pinned > 0 && (
         <span className="inline-flex items-center gap-2 text-sm text-on-surface">
-          <Pin size={14} className="text-primary" />
-          <span>
-            Anuncios fijados{" "}
-            <strong>
-              {pinned.length}/{limits.pinned}
-            </strong>
-          </span>
           {pinned.length >= 2 && (
             <button
               type="button"
@@ -87,6 +80,14 @@ export default function PlanFeaturesPanel({
               Reordenar
             </button>
           )}
+          <Pin size={14} className="text-primary" />
+          <span>
+            Anuncios fijados{" "}
+            <strong>
+              {pinned.length}/{limits.pinned}
+            </strong>
+          </span>
+          
         </span>
       )}
       {limits.slots > 0 && (

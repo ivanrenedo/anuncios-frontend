@@ -10,7 +10,6 @@ import {
   Languages,
   Palette,
   Phone,
-  LogOut,
   Trash2,
   AlertTriangle,
   Loader2,
@@ -30,7 +29,7 @@ interface Props {
 /**
  * Consolidates everything that used to be sprinkled across `/edit-profile`
  * (notifications, privacy toggles, language, theme) plus the account actions
- * (change phone, log out, delete account) into a single modal launched from
+ * (change phone, delete account) into a single modal launched from
  * the profile header. Edit-profile keeps only the personal-info fields
  * (name, bio, location, photos, email display, phone change trigger).
  */
@@ -56,7 +55,6 @@ export default function SettingsModal({ open, onClose }: Props) {
   const [error, setError] = useState("");
 
   const [phoneOpen, setPhoneOpen] = useState(false);
-  const [logoutConfirm, setLogoutConfirm] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
 
   const [deleteMyAccount, { loading: deleting }] = useMutation(DELETE_MY_ACCOUNT);
@@ -112,13 +110,6 @@ export default function SettingsModal({ open, onClose }: Props) {
     } finally {
       setSaving(false);
     }
-  };
-
-  const handleLogout = () => {
-    if (typeof window !== "undefined") localStorage.clear();
-    logout();
-    onClose();
-    router.push("/");
   };
 
   const handleDeleteAccount = async () => {
@@ -252,44 +243,6 @@ export default function SettingsModal({ open, onClose }: Props) {
                 <span aria-hidden>→</span>
               </button>
 
-              {!logoutConfirm ? (
-                <button
-                  type="button"
-                  onClick={() => setLogoutConfirm(true)}
-                  className="mt-2 flex w-full items-center justify-between rounded-lg bg-surface-container px-4 py-3 text-left text-sm font-semibold text-on-surface transition hover:bg-surface-high"
-                >
-                  <span className="inline-flex items-center gap-2">
-                    <LogOut size={15} /> Cerrar sesión
-                  </span>
-                  <span aria-hidden>→</span>
-                </button>
-              ) : (
-                <div className="mt-2 rounded-lg border border-outline-variant/40 bg-surface-container p-3">
-                  <p className="text-sm font-semibold text-on-surface">
-                    ¿Cerrar sesión?
-                  </p>
-                  <p className="mt-0.5 text-xs text-muted">
-                    Tendrás que volver a iniciar sesión para acceder a tu
-                    perfil, favoritos y notificaciones.
-                  </p>
-                  <div className="mt-3 flex gap-2">
-                    <button
-                      type="button"
-                      onClick={handleLogout}
-                      className="inline-flex items-center gap-1.5 rounded-lg bg-danger px-4 py-2 text-sm font-bold text-white transition hover:opacity-90"
-                    >
-                      <LogOut size={14} /> Sí, cerrar sesión
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setLogoutConfirm(false)}
-                      className="rounded-lg bg-surface-high px-4 py-2 text-sm font-semibold text-on-surface transition hover:opacity-80"
-                    >
-                      Cancelar
-                    </button>
-                  </div>
-                </div>
-              )}
             </Section>
 
             {/* Danger */}

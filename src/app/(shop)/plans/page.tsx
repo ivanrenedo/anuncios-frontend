@@ -15,6 +15,7 @@ import {
   MessageCircle,
 } from "lucide-react";
 import { useProfile } from "@/hooks/useProfile";
+import { useBusinessContact } from "@/hooks/useBusinessContact";
 
 type PlanKey = "FREE" | "BASIC" | "STAR" | "PREMIUM";
 
@@ -99,7 +100,6 @@ const PLANS: PlanDef[] = [
       { label: "8 destacados incluidos al mes (−50 % extra)", included: true },
       { label: "10 anuncios fijados en tu perfil", included: true },
       { label: "Auto-bump diario (pool 5)", included: true },
-      { label: "Perfil Premium con tienda integrada", included: true },
       { label: "Carrusel \"Tiendas Premium\" en portada", included: true },
       { label: "Sin anuncios de terceros en tu ficha", included: true },
       { label: "Verificación 👑 + analytics completo", included: true },
@@ -107,16 +107,7 @@ const PLANS: PlanDef[] = [
   },
 ];
 
-const WHATSAPP_NUMBER = "240222626418";
 const YEARLY_DISCOUNT = 0.25;
-
-function contactWhatsApp(plan: string, cycle: "MONTHLY" | "YEARLY") {
-  const cycleLabel = cycle === "YEARLY" ? "anual" : "mensual";
-  const msg = encodeURIComponent(
-    `Hola, quiero contratar el plan ${plan} (${cycleLabel}) en Bomelh. ¿Cómo lo activo?`,
-  );
-  window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`, "_blank");
-}
 
 function fmtXaf(n: number): string {
   return new Intl.NumberFormat("es-ES").format(n);
@@ -125,6 +116,7 @@ function fmtXaf(n: number): string {
 export default function PlansPage() {
   const { profile } = useProfile();
   const [cycle, setCycle] = useState<"MONTHLY" | "YEARLY">("MONTHLY");
+  const { phone: contactNumber } = useBusinessContact();
 
   const currentPlan = profile?.plan ?? "FREE";
   const effectivePlan = profile?.effectivePlan ?? currentPlan;
@@ -138,6 +130,14 @@ export default function PlansPage() {
       month: "long",
       year: "numeric",
     });
+
+    function contactWhatsApp(plan: string, cycle: "MONTHLY" | "YEARLY") {
+      const cycleLabel = cycle === "YEARLY" ? "anual" : "mensual";
+      const msg = encodeURIComponent(
+        `Hola, quiero contratar el plan ${plan} (${cycleLabel}) en Bomelh. ¿Cómo lo activo?`,
+      );
+      window.open(`https://wa.me/${contactNumber}?text=${msg}`, "_blank");
+    }
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
@@ -418,7 +418,7 @@ export default function PlansPage() {
                   "Hola, quiero destacar un anuncio en Bomelh. ¿Cómo procedo?",
                 );
                 window.open(
-                  `https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`,
+                  `https://wa.me/${contactNumber}?text=${msg}`,
                   "_blank",
                 );
               }}

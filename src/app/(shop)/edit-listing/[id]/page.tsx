@@ -330,7 +330,7 @@ export default function EditListingPage({ params }: { params: Promise<{ id: stri
       {/* Common fields */}
       <section className="mt-6 space-y-4">
         <div>
-          <label className="text-sm font-bold text-on-surface">Titulo</label>
+          <label className="text-sm font-bold text-on-surface">Título</label>
           <input
             type="text"
             value={form.title || ""}
@@ -339,7 +339,7 @@ export default function EditListingPage({ params }: { params: Promise<{ id: stri
           />
         </div>
         <div>
-          <label className="text-sm font-bold text-on-surface">Descripcion</label>
+          <label className="text-sm font-bold text-on-surface">Descripción</label>
           <textarea
             value={form.description || ""}
             onChange={(e) => setField("description", e.target.value)}
@@ -439,7 +439,7 @@ export default function EditListingPage({ params }: { params: Promise<{ id: stri
           <>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-sm font-bold text-on-surface">Operacion</label>
+                <label className="text-sm font-bold text-on-surface">Operación</label>
                 <select
                   value={form.operation || ""}
                   onChange={(e) => setField("operation", e.target.value)}
@@ -517,7 +517,7 @@ export default function EditListingPage({ params }: { params: Promise<{ id: stri
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-sm font-bold text-on-surface">Operacion</label>
+                <label className="text-sm font-bold text-on-surface">Operación</label>
                 <select
                   value={form.operation || ""}
                   onChange={(e) => setField("operation", e.target.value)}

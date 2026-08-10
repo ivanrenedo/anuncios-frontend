@@ -853,6 +853,20 @@ export const MY_AUTO_BUMP_SLOTS = gql`
   }
 `;
 
+export const MY_BOOST_QUOTA = gql`
+  query MyBoostQuota {
+    myBoostQuota {
+      plan
+      includedPerMonth
+      usedThisMonth
+      remainingThisMonth
+      extraDiscountPct
+      cycleStartsAt
+      cycleEndsAt
+    }
+  }
+`;
+
 export const HOME_CAROUSEL_PREMIUM = gql`
   query HomeCarouselPremium($take: Int) {
     homeCarouselPremium(take: $take) {

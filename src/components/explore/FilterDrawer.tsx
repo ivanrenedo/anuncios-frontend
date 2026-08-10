@@ -7,7 +7,6 @@ import {
   MapPin,
   Minus,
   Plus,
-  Search,
   SlidersHorizontal,
   Sparkles,
   Tag,
@@ -29,10 +28,6 @@ export interface FilterDrawerProps {
   activeCategory: string;
   catFilter: CatFilter;
   onOpenCategoryPicker: () => void;
-
-  query: string;
-  setQuery: (v: string) => void;
-  clearSearch: () => void;
 
   cityFilter: string;
   setCityFilter: (v: string) => void;
@@ -79,11 +74,10 @@ export interface FilterDrawerProps {
 /**
  * Right-side slide-in filter drawer used by the Explore page. Contains every
  * filter the mobile FilterDrawer exposes so the web experience matches feature
- * parity: search text, category, city, price range + "solo con precio",
+ * parity: category, city, price range + "solo con precio",
  * category-vertical fields (operation, brand/model, conditions, engines,
  * transmissions, offerTypes, bedrooms/bathrooms/surface) and seller type.
- * State is owned by the parent; this is a controlled component so the header
- * search input and the drawer stay in sync.
+ * State is owned by the parent; this is a controlled component.
  */
 export default function FilterDrawer(props: FilterDrawerProps) {
   const {
@@ -93,9 +87,6 @@ export default function FilterDrawer(props: FilterDrawerProps) {
     activeCategory,
     catFilter,
     onOpenCategoryPicker,
-    query,
-    setQuery,
-    clearSearch,
     cityFilter,
     setCityFilter,
     priceMin,
@@ -656,7 +647,7 @@ function Toggle({
     >
       <span
         className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
-          checked ? "translate-x-5" : "translate-x-0.5"
+          checked ? "translate-x-0.5" : "-translate-x-5"
         }`}
       />
     </button>

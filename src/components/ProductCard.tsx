@@ -174,31 +174,7 @@ export default function ProductCard({
             {product.condition}
           </span>
         )}
-        {/* v2 Fase 11.2/11.3 — status del pin y auto-bump. Se apilan en la
-            esquina inferior derecha para no chocar con el heart / owner
-            actions arriba. Fill del icono = activo (los props isPinned /
-            isAutoBumped vienen del contexto del perfil dueño). */}
-        {(isPinned || isAutoBumped) && (
-          <div className="absolute bottom-2 right-2 flex flex-col gap-1">
-            {isPinned && (
-              <span
-                title="Anuncio fijado en tu perfil"
-                className="grid h-6 w-6 place-items-center rounded-full bg-primary/90 text-white shadow"
-              >
-                <Pin size={12} strokeWidth={2.5} fill="currentColor" />
-              </span>
-            )}
-            {isAutoBumped && (
-              <span
-                title="En pool de auto-bump"
-                className="grid h-6 w-6 place-items-center rounded-full bg-amber-500 text-white shadow"
-              >
-                <Zap size={12} strokeWidth={2.5} fill="currentColor" />
-              </span>
-            )}
-          </div>
-        )}
-
+      
        {tags.length > 0 && (
           <div className={`absolute top-2 left-2 row flex flex-wrap gap-1 max-w-[70%] z-8`} style={{...(overlayLayers > 0 && { top: 8 + overlayLayers * 26 })}}>
             {tags.map((t) => (
@@ -282,7 +258,8 @@ export default function ProductCard({
             )}
           </div>
         ) : (
-          canFavorite && (
+          <>
+          {canFavorite && (
             <button
               onClick={onLike}
               aria-label={liked ? "Quitar de favoritos" : "Guardar"}
@@ -294,7 +271,32 @@ export default function ProductCard({
                 strokeWidth={1.6}
               />
             </button>
-          )
+          )}
+            {/* v2 Fase 11.2/11.3 — status del pin y auto-bump. Se apilan en la
+            esquina inferior derecha para no chocar con el heart / owner
+            actions arriba. Fill del icono = activo (los props isPinned /
+            isAutoBumped vienen del contexto del perfil dueño). */}
+            {(isPinned || isAutoBumped) && (
+              <div className="absolute top-3 right-12 flex flex-col gap-1">
+                {isPinned && (
+                  <span
+                    title="Anuncio fijado en tu perfil"
+                    className="grid h-6 w-6 place-items-center rounded-full bg-primary/90 text-white shadow"
+                  >
+                    <Pin size={12} strokeWidth={2.5} fill="currentColor" />
+                  </span>
+                )}
+                {isAutoBumped && (
+                  <span
+                    title="En pool de auto-bump"
+                    className="grid h-6 w-6 place-items-center rounded-full bg-amber-500 text-white shadow"
+                  >
+                    <Zap size={12} strokeWidth={2.5} fill="currentColor" />
+                  </span>
+                )}
+              </div>
+            )}
+          </>
         )}
 
         {/* Owner delete confirmation overlay — sits on top of the image with
@@ -335,6 +337,7 @@ export default function ProductCard({
             </div>
           </div>
         )}
+          
       </div>
 
       {/* Body */}
@@ -342,9 +345,9 @@ export default function ProductCard({
         {/* Price first — the strongest signal */}
         <div className="flex flex-col flex-1">
           <div className="flex flex-wrap gap-1.5 items-center leading-3">
-            <span className={`text-[17px] group-[.grid]:text-base sm:text-lg font-bold leading-5 ${price.hasDiscount ? "text-danger" : "text-primary"}`}>
+            {price.final > 0 ?(<span className={`text-[17px] group-[.grid]:text-base sm:text-lg font-bold leading-5 ${price.hasDiscount ? "text-danger" : "text-primary"}`}>
               {formatPrice(price.final)}
-            </span>
+            </span>) : <></>}
             {price.hasDiscount && (
               <span className="text-[13px] group-[.grid]:text-[11px] text-muted line-through">
                 {formatPrice(price.original)}

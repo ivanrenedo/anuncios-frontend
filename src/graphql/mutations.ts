@@ -186,6 +186,12 @@ export const BOOST_PRODUCT = gql`
   }
 `;
 
+export const BOOST_MY_PRODUCT = gql`
+  mutation BoostMyProduct($id: String!, $days: Int) {
+    boostMyProduct(id: $id, days: $days) { id boostedUntil bumpedAt }
+  }
+`;
+
 export const ADMIN_SET_PRODUCT_STATUS = gql`
   mutation AdminSetProductStatus($id: String!, $status: String!, $reason: String) {
     adminSetProductStatus(id: $id, status: $status, reason: $reason) { id status }

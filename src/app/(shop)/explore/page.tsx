@@ -333,7 +333,7 @@ function ExploreInner() {
       setActiveConditions([]);
     }
     if (nextCatSlug) setPendingCatSlug(nextCatSlug);
-    if (nextSectionId !== null) setActiveSectionId(nextSectionId || null);
+    setActiveSectionId(nextSectionId || null);
 
     if (!hasEntryParams || typeof window === "undefined") return;
     const url = new URL(window.location.href);
@@ -659,9 +659,6 @@ function ExploreInner() {
     activeCategory,
     catFilter,
     onOpenCategoryPicker: () => setCategoryPickerOpen(true),
-    query,
-    setQuery: updateQuery,
-    clearSearch,
     cityFilter,
     setCityFilter: updateCityFilter,
     priceMin,
@@ -737,7 +734,7 @@ function ExploreInner() {
             width={728}
             height={90}
             mobileWidth={320}
-            mobileHeight={50}
+            mobileHeight={100}
             className="mx-auto mb-5"
           />
           <div className="flex row gap-2">

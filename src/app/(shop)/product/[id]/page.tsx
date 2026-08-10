@@ -32,7 +32,6 @@ import {
   Building2,
   Ruler,
   ExternalLink,
-  Megaphone,
   Sparkles,
   Flame,
 } from "lucide-react";
@@ -268,7 +267,7 @@ export default function ProductDetailPage({
         width={728}
         height={90}
         mobileWidth={320}
-        mobileHeight={50}
+        mobileHeight={100}
         className="mb-5 mx-auto"
         sellerPlan={sellerPlan}
       />
@@ -431,7 +430,7 @@ export default function ProductDetailPage({
               el resto (tachado + porcentaje) por debajo con flex-wrap para
               que no se rompan en pantallas estrechas. En sm+ vuelven a la
               misma línea si hay espacio. */}
-          <div className="mt-4 rounded-xl border border-outline-variant/30 bg-surface-lowest p-4">
+          {price.final > 0 ? (<div className="mt-4 rounded-xl border border-outline-variant/30 bg-surface-lowest p-4">
             <div className="flex gap-2 flex-row flex-wrap items-center sm:gap-x-3 sm:gap-y-2">
               <span className="text-3xl font-extrabold leading-none tracking-tight text-primary sm:text-4xl">
                 {formatPrice(price.final)}
@@ -467,7 +466,7 @@ export default function ProductDetailPage({
                 </span>
               </p>
             )}
-          </div>
+          </div>) : <></>}
 
           {/* Meta chips */}
           <div className="mt-4 flex flex-wrap gap-2">
@@ -562,9 +561,9 @@ export default function ProductDetailPage({
             <Shield size={20} className="mt-0.5 shrink-0 text-tertiary" />
             <p className="text-sm text-on-surface-variant">
               <span className="font-bold text-on-surface">
-                Pago en persona unicamente.
+                Pago en persona únicamente.
               </span>{" "}
-              Nunca envies dinero por adelantado y queda en un lugar publico.
+              Nunca envíes dinero por adelantado y queda en un lugar público.
             </p>
           </div>
 
@@ -586,53 +585,14 @@ export default function ProductDetailPage({
             </div>
           ) : (
             <div className="mt-4 rounded-xl border border-outline-variant/30 bg-surface-low p-3 text-center text-sm text-muted">
-              El vendedor no ha compartido su telefono
-            </div>
-          )}
-
-          {/* Owner boost CTA — replica del mobile: contactamos por WhatsApp
-              con la cuenta de negocio para gestionar el destaque manualmente
-              (mientras no haya cobro automático). */}
-          {isOwner && (
-            <div className="mt-3">
-              <button
-                type="button"
-                onClick={() => {
-                  const msg = encodeURIComponent(
-                    `Hola, quiero destacar mi anuncio "${product.title}" (${SHARE_URL}/product/${product.id}) durante 7 días.`,
-                  );
-                  window.open(
-                    `https://wa.me/${contactNumber}?text=${msg}`,
-                    "_blank",
-                  );
-                }}
-                className="flex w-full items-center gap-3 rounded-2xl border border-purple-500/20 bg-purple-500/[0.06] p-4 text-left transition hover:bg-purple-500/[0.1]"
-              >
-                <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-purple-500/15 text-purple-600">
-                  <ArrowUpCircle size={20} strokeWidth={1.8} />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-bold text-on-surface">
-                    Destacar este anuncio
-                  </p>
-                  <p className="mt-0.5 text-xs leading-5 text-on-surface-variant">
-                    Aparece en las primeras posiciones durante 7 días por solo
-                    1.000 XAF
-                  </p>
-                </div>
-                <MessageCircle
-                  size={16}
-                  className="shrink-0 text-purple-600"
-                  strokeWidth={1.8}
-                />
-              </button>
+              El vendedor no ha compartido su teléfono
             </div>
           )}
 
           {/* Description */}
           {product.description && (
             <div className="mt-6">
-              <h3 className="mb-2 text-base font-bold">Descripcion</h3>
+              <h3 className="mb-2 text-base font-bold">Descripción</h3>
               <p className="whitespace-pre-line text-sm leading-6 text-on-surface-variant">
                 {product.description}
               </p>
@@ -644,10 +604,10 @@ export default function ProductDetailPage({
           {/* Vehicle detail */}
           {veh && (
             <div className="mt-6">
-              <h3 className="mb-3 text-base font-bold">Ficha tecnica</h3>
+              <h3 className="mb-3 text-base font-bold">Ficha técnica</h3>
               <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
                 {veh.operation && (
-                  <SpecCard icon={<Car size={16} />} label="Operacion" value={veh.operation} />
+                  <SpecCard icon={<Car size={16} />} label="Operación" value={veh.operation} />
                 )}
                 {veh.brand && (
                   <SpecCard icon={<Car size={16} />} label="Marca" value={veh.brand} />
@@ -656,7 +616,7 @@ export default function ProductDetailPage({
                   <SpecCard icon={<Car size={16} />} label="Modelo" value={veh.model} />
                 )}
                 {veh.year != null && (
-                  <SpecCard icon={<Calendar size={16} />} label="Ano" value={veh.year} />
+                  <SpecCard icon={<Calendar size={16} />} label="Año" value={veh.year} />
                 )}
                 {veh.kilometrage != null && (
                   <SpecCard
@@ -666,7 +626,7 @@ export default function ProductDetailPage({
                   />
                 )}
                 {veh.transmission && (
-                  <SpecCard icon={<Settings2 size={16} />} label="Transmision" value={veh.transmission} />
+                  <SpecCard icon={<Settings2 size={16} />} label="Transmisión" value={veh.transmission} />
                 )}
                 {veh.engine && (
                   <SpecCard icon={<Fuel size={16} />} label="Motor" value={veh.engine} />
@@ -681,16 +641,16 @@ export default function ProductDetailPage({
           {/* Property detail */}
           {prop && (
             <div className="mt-6">
-              <h3 className="mb-3 text-base font-bold">Caracteristicas</h3>
+              <h3 className="mb-3 text-base font-bold">Características</h3>
               <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
                 {prop.operation && (
-                  <SpecCard icon={<Building2 size={16} />} label="Operacion" value={prop.operation} />
+                  <SpecCard icon={<Building2 size={16} />} label="Operación" value={prop.operation} />
                 )}
                 {prop.bedrooms != null && prop.bedrooms > 0 && (
                   <SpecCard icon={<BedDouble size={16} />} label="Dormitorios" value={prop.bedrooms} />
                 )}
                 {prop.bathrooms != null && prop.bathrooms > 0 && (
-                  <SpecCard icon={<Bath size={16} />} label="Banos" value={prop.bathrooms} />
+                  <SpecCard icon={<Bath size={16} />} label="Baños" value={prop.bathrooms} />
                 )}
                 {prop.floor != null && prop.floor > 0 && (
                   <SpecCard icon={<Building2 size={16} />} label="Planta" value={`${prop.floor}a`} />
@@ -777,6 +737,46 @@ export default function ProductDetailPage({
             </div>
           )}
 
+          {/* Owner boost CTA — replica del mobile: contactamos por WhatsApp
+              con la cuenta de negocio para gestionar el destaque manualmente
+              (mientras no haya cobro automático). */}
+          {isOwner && (
+            <div className="mt-3">
+              <div className="mt-5 rounded-2xl border border-primary/20 bg-primary/5 p-5">
+                <div className="flex items-start gap-3">
+                  <ArrowUpCircle
+                    size={22}
+                    strokeWidth={1.5}
+                    className="mt-0.5 shrink-0 text-primary"
+                  />
+                  <button
+                  onClick={() => {
+                    const msg = encodeURIComponent(
+                      `Hola, quiero destacar mi anuncio "${product.title}" (${SHARE_URL}/product/${product.id}) durante 7 días.`,
+                    );
+                    window.open(
+                      `https://wa.me/${contactNumber}?text=${msg}`,
+                      "_blank",
+                    );
+                  }}
+                  className=" text-start">
+                    <p className="text-sm font-bold text-on-surface">
+                      Destacar un anuncio suelto
+                    </p>
+                    <p className="mt-1 text-[13px] leading-relaxed text-on-surface-variant">
+                      ¿No quieres un plan todavía? Destaca un anuncio individual: 1.000
+                      XAF por 3 días, 2.000 XAF por 7 días o 5.000 XAF por 30 días.
+                      Aparecerá en las primeras posiciones de su categoría.
+                    </p>
+                    <div className="mt-3 inline-flex items-center gap-2 text-sm font-bold text-primary transition hover:opacity-80">
+                      <MessageCircle size={13} strokeWidth={2} />
+                      Solicitar por WhatsApp
+                    </div>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
           {/* Report — hidden for the owner; other users see a prominent CTA
               so misleading or fraudulent listings are one tap away. */}
           {!isOwner && (

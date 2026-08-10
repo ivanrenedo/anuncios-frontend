@@ -294,7 +294,7 @@ export default function HomePage() {
                     width={728}
                     height={90}
                     mobileWidth={320}
-                    mobileHeight={50}
+                    mobileHeight={100}
                     className="mx-auto mt-5"
                   />
                     <section className="px-4 pt-6 sm:px-6">

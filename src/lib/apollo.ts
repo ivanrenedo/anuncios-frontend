@@ -143,6 +143,8 @@ export const client = new ApolloClient({
           followers: { merge: false },
           following: { merge: false },
           mySavedSearches: { merge: false },
+          myAutoBumpSlots: { merge: false },
+          categoryTree: { merge: false },
         },
       },
       ProductModel: {

@@ -404,7 +404,7 @@ export default function PublicUserProfile() {
                 {/* v2 Fase 12 — WhatsApp: acción primaria para contactar al
                     vendedor / a su tienda. Verde emerald para diferenciar
                     visualmente de "Seguir" (primary) y "Denunciar" (danger). */}
-                {waHref && (
+                {sellerCanPersonalWa && (
                   <a
                     href={waHref}
                     target="_blank"

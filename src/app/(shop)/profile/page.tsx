@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   BadgeCheck,
   MapPin,
@@ -27,6 +28,7 @@ import {
   Settings,
   Share2,
   Plus,
+  LogOut,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
@@ -71,11 +73,13 @@ type Tab = "listings" | "reviews" | "followers" | "following";
 const VERIFICATION_COOLDOWN_DAYS = 7;
 
 export default function ProfilePage() {
-  const { user, isAuthenticated, loading: authLoading } = useAuth();
+  const router = useRouter();
+  const { user, isAuthenticated, loading: authLoading, logout } = useAuth();
   const { profile, loading: profileLoading } = useProfile();
   const userId = user?.id ?? "";
 
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [logoutConfirm, setLogoutConfirm] = useState(false);
   const [tab, setTab] = useState<Tab>("listings");
   const [viewerUri, setViewerUri] = useState<string | null>(null);
   const [verificationModalOpen, setVerificationModalOpen] = useState(false);
@@ -110,8 +114,7 @@ export default function ProfilePage() {
     request: verificationRequest,
     refetch: refetchVerification,
   } = useVerificationRequest();
-  const { requestVerification, loading: requestingVerification } =
-    useRequestVerification();
+  const { loading: requestingVerification } = useRequestVerification();
 
   const effectivePlan = profile?.effectivePlan ?? profile?.plan ?? "FREE";
   const hasStatsAccess = effectivePlan === "STAR" || effectivePlan === "PREMIUM";
@@ -302,6 +305,12 @@ export default function ProfilePage() {
     await share({ type: "profile", id: p.id, name: p.name ?? "este perfil" });
   };
 
+  const handleLogout = () => {
+    if (typeof window !== "undefined") localStorage.clear();
+    logout();
+    router.push("/");
+  };
+
   return (
     <div className="mx-auto max-w-7xl pb-8">
       {/* Cover photo */}
@@ -360,7 +369,6 @@ export default function ProfilePage() {
                 <BadgeCheck
                   size={20}
                   className="fill-primary text-white"
-                  strokeWidth={0}
                 />
               )}
               {planLabel && (
@@ -737,8 +745,9 @@ export default function ProfilePage() {
 
       {/* Tab content */}
       <div className="mt-4">
-        {tab === "listings" &&
-          (!prodLoading && products.length === 0 ? (
+        {tab === "listings" && (
+          <>
+            {!prodLoading && products.length === 0 ? (
             <div className="px-6 py-16 text-center">
               <p className="text-sm text-muted">
                 No tienes anuncios publicados.{" "}
@@ -770,7 +779,49 @@ export default function ProfilePage() {
                 onToggleAutoBump={canAutoBump ? toggleAutoBump : undefined}
               />
             </>
-          ))}
+          )}
+
+            <section className="mx-4 mb-10 mt-10 rounded-xl border border-outline-variant/30 bg-surface-lowest p-4 sm:mx-6">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h2 className="text-sm font-bold text-on-surface">Cuenta</h2>
+                  <p className="mt-0.5 text-xs text-muted">
+                    Gestiona tu sesión en este dispositivo.
+                  </p>
+                </div>
+                {!logoutConfirm ? (
+                  <button
+                    type="button"
+                    onClick={() => setLogoutConfirm(true)}
+                    className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-danger/30 bg-danger/5 px-4 py-2 text-sm font-bold text-danger transition hover:bg-danger/10"
+                  >
+                    <LogOut size={15} /> Cerrar sesión
+                  </button>
+                ) : (
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                    <span className="text-sm font-semibold text-on-surface">
+                      ¿Cerrar sesión?
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-danger px-4 py-2 text-sm font-bold text-white transition hover:opacity-90"
+                    >
+                      <LogOut size={14} /> Sí, cerrar sesión
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setLogoutConfirm(false)}
+                      className="rounded-lg bg-surface-container px-4 py-2 text-sm font-semibold text-on-surface transition hover:bg-surface-high"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                )}
+              </div>
+            </section>
+          </>
+        )}
 
         {tab === "reviews" && (
           <ReviewsList
