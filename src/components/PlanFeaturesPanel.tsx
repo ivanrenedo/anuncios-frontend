@@ -3,23 +3,10 @@
 /* eslint-disable @next/next/no-img-element */
 import { useState, useMemo } from "react";
 import { useMutation, useQuery } from "@apollo/client/react";
-import {
-  Pin,
-  Zap,
-  X,
-  Check,
-  Loader2,
-  AlertCircle,
-} from "lucide-react";
+import { Pin, Zap, X, Loader2, AlertCircle, ArrowUpDown } from "lucide-react";
 import type { Product } from "@/lib/types";
-import {
-  PINNED_PRODUCTS,
-  MY_AUTO_BUMP_SLOTS,
-} from "@/graphql/queries";
-import {
-  SET_PINNED_PRODUCTS,
-  SET_AUTO_BUMP_SLOTS,
-} from "@/graphql/mutations";
+import { PINNED_PRODUCTS, MY_AUTO_BUMP_SLOTS } from "@/graphql/queries";
+import { SET_PINNED_PRODUCTS } from "@/graphql/mutations";
 import { resolveImage } from "@/lib/config";
 import { getErrorMessage } from "@/lib/errors";
 
@@ -37,9 +24,20 @@ interface Props {
 }
 
 /**
- * v2 Fase 10b — panel de gestión para features plan-gateadas (pins de perfil
- * y pool de auto-bump). Sólo visible para Star/Premium. Los productos vienen
- * del padre para reutilizar el fetch existente y evitar N+1.
+ * v2 Fase 13 — panel compacto con las ventajas plan-gateadas.
+ *
+ * Diseño consolidado:
+ *   - Add/remove de pins y auto-bump vive SOLO en el botón de cada card
+ *     del perfil (Fase 11.3). Esta panel es puramente informativa.
+ *   - Excepción: reorder de pins. Cuando hay ≥2 pins, aparece un chip
+ *     "↕ Reordenar" que abre un modal ligero solo con la lista ordenada +
+ *     flechas. Sin checkbox, sin add/remove — el 90% del flujo pasa por
+ *     la card.
+ *   - Auto-bump no tiene concepto de orden → cero interacción aquí.
+ *
+ * Retirado respecto de Fase 10b: ProductPicker con multiselect. El
+ * bulk-select se sacrifica a favor de una única forma de pinear (card),
+ * lo que elimina ambigüedad UX.
  */
 export default function PlanFeaturesPanel({
   userId,
@@ -48,8 +46,7 @@ export default function PlanFeaturesPanel({
 }: Props) {
   const limits =
     PLAN_LIMITS[effectivePlan as keyof typeof PLAN_LIMITS] ?? PLAN_LIMITS.FREE;
-  const [pinnedOpen, setPinnedOpen] = useState(false);
-  const [slotsOpen, setSlotsOpen] = useState(false);
+  const [reorderOpen, setReorderOpen] = useState(false);
 
   const { data: pinnedData } = useQuery(PINNED_PRODUCTS, {
     variables: { userId },
@@ -61,127 +58,95 @@ export default function PlanFeaturesPanel({
     fetchPolicy: "cache-and-network",
   }) as { data: any };
 
-  const pinnedIds: string[] = (pinnedData?.pinnedProducts ?? []).map(
-    (p: Product) => p.id,
-  );
-  const slotIds: string[] = (slotsData?.myAutoBumpSlots ?? []).map(
-    (s: any) => s.productId,
-  );
+  const pinned: Product[] = pinnedData?.pinnedProducts ?? [];
+  const slotCount: number = (slotsData?.myAutoBumpSlots ?? []).length;
 
   if (limits.pinned === 0 && limits.slots === 0) return null;
 
   return (
-    <div className="mb-6 rounded-2xl border border-primary/25 bg-primary/5 p-4">
-      <p className="mb-3 text-xs font-extrabold uppercase tracking-wide text-primary">
+    <div className="mb-6 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-2xl border border-primary/25 bg-primary/5 px-4 py-3">
+      <p className="text-xs font-extrabold uppercase tracking-wide text-primary">
         Ventajas de tu plan
       </p>
-      <div className="flex flex-wrap gap-2">
-        {limits.pinned > 0 && (
-          <button
-            type="button"
-            onClick={() => setPinnedOpen(true)}
-            className="inline-flex items-center gap-2 rounded-xl bg-surface-lowest px-3 py-2 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
-          >
-            <Pin size={14} className="text-primary" />
-            Anuncios fijados
-            <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[11px] font-bold text-primary">
-              {pinnedIds.length} / {limits.pinned}
-            </span>
-          </button>
-        )}
-        {limits.slots > 0 && (
-          <button
-            type="button"
-            onClick={() => setSlotsOpen(true)}
-            className="inline-flex items-center gap-2 rounded-xl bg-surface-lowest px-3 py-2 text-sm font-semibold text-on-surface transition hover:bg-surface-container"
-          >
-            <Zap size={14} className="text-amber-500" />
-            Auto-bump {limits.cadence}
-            <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-bold text-amber-600">
-              {slotIds.length} / {limits.slots}
-            </span>
-          </button>
-        )}
-      </div>
-
-      {pinnedOpen && (
-        <ProductPicker
-          title="Anuncios fijados en tu perfil"
-          subtitle="Aparecen antes que el resto en tu perfil."
-          products={products}
-          initialSelectedIds={pinnedIds}
-          limit={limits.pinned}
-          mutation="pins"
-          onClose={() => setPinnedOpen(false)}
-        />
+      {limits.pinned > 0 && (
+        <span className="inline-flex items-center gap-2 text-sm text-on-surface">
+          <Pin size={14} className="text-primary" />
+          <span>
+            Anuncios fijados{" "}
+            <strong>
+              {pinned.length}/{limits.pinned}
+            </strong>
+          </span>
+          {pinned.length >= 2 && (
+            <button
+              type="button"
+              onClick={() => setReorderOpen(true)}
+              className="inline-flex items-center gap-1 rounded-full bg-surface-lowest px-2.5 py-0.5 text-[11px] font-bold text-primary transition hover:bg-surface-container"
+            >
+              <ArrowUpDown size={11} />
+              Reordenar
+            </button>
+          )}
+        </span>
       )}
-      {slotsOpen && (
-        <ProductPicker
-          title={`Pool de auto-bump (${limits.cadence})`}
-          subtitle="Estos anuncios suben automáticamente a la parte superior de su categoría."
+      {limits.slots > 0 && (
+        <span className="inline-flex items-center gap-2 text-sm text-on-surface">
+          <Zap size={14} className="text-amber-500" />
+          <span>
+            Auto-bump {limits.cadence}{" "}
+            <strong>
+              {slotCount}/{limits.slots}
+            </strong>
+          </span>
+        </span>
+      )}
+      <span className="ml-auto text-[11px] text-on-surface-variant/80">
+        Fija o activa auto-bump con los botones{" "}
+        <Pin size={10} className="inline align-middle text-primary" />{" "}
+        <Zap size={10} className="inline align-middle text-amber-500" /> de
+        cada anuncio.
+      </span>
+
+      {reorderOpen && (
+        <ReorderPinsModal
+          userId={userId}
+          pinned={pinned}
           products={products}
-          initialSelectedIds={slotIds}
-          limit={limits.slots}
-          mutation="slots"
-          onClose={() => setSlotsOpen(false)}
+          onClose={() => setReorderOpen(false)}
         />
       )}
     </div>
   );
 }
 
-interface PickerProps {
-  title: string;
-  subtitle: string;
+interface ReorderProps {
+  userId: string;
+  pinned: Product[];
   products: Product[];
-  initialSelectedIds: string[];
-  limit: number;
-  mutation: "pins" | "slots";
   onClose: () => void;
 }
 
-function ProductPicker({
-  title,
-  subtitle,
-  products,
-  initialSelectedIds,
-  limit,
-  mutation,
-  onClose,
-}: PickerProps) {
-  const [selected, setSelected] = useState<string[]>(initialSelectedIds);
+function ReorderPinsModal({ pinned, products, onClose }: ReorderProps) {
+  // Trabajamos sobre un array de ids que mantiene el orden actual del server.
+  // Los flechas ↑/↓ intercambian posiciones. Save envía la nueva secuencia.
+  const [order, setOrder] = useState<string[]>(() => pinned.map((p) => p.id));
   const [error, setError] = useState("");
-  const active = useMemo(
-    () => products.filter((p) => p.status === "active"),
-    [products],
-  );
+  const productMap = useMemo(() => {
+    const m = new Map<string, Product>();
+    for (const p of products) m.set(p.id, p);
+    for (const p of pinned) if (!m.has(p.id)) m.set(p.id, p);
+    return m;
+  }, [products, pinned]);
 
-  const [setPinnedMut, { loading: savingPins }] = useMutation(
-    SET_PINNED_PRODUCTS,
-    { refetchQueries: ["PinnedProducts"], awaitRefetchQueries: true },
-  );
-  const [setSlotsMut, { loading: savingSlots }] = useMutation(
-    SET_AUTO_BUMP_SLOTS,
-    { refetchQueries: ["MyAutoBumpSlots"], awaitRefetchQueries: true },
-  );
-  const saving = savingPins || savingSlots;
-
-  const toggle = (id: string) => {
-    setError("");
-    setSelected((prev) => {
-      if (prev.includes(id)) return prev.filter((x) => x !== id);
-      if (prev.length >= limit) {
-        setError(`Máximo ${limit} anuncios para este plan.`);
-        return prev;
-      }
-      return [...prev, id];
-    });
-  };
+  const [setPinnedMut, { loading: saving }] = useMutation(SET_PINNED_PRODUCTS, {
+    refetchQueries: ["PinnedProducts"],
+    awaitRefetchQueries: true,
+  });
 
   const move = (idx: number, dir: -1 | 1) => {
     const j = idx + dir;
-    if (j < 0 || j >= selected.length) return;
-    setSelected((prev) => {
+    if (j < 0 || j >= order.length) return;
+    setOrder((prev) => {
       const next = [...prev];
       [next[idx], next[j]] = [next[j], next[idx]];
       return next;
@@ -191,11 +156,7 @@ function ProductPicker({
   const onSave = async () => {
     setError("");
     try {
-      if (mutation === "pins") {
-        await setPinnedMut({ variables: { productIds: selected } });
-      } else {
-        await setSlotsMut({ variables: { productIds: selected } });
-      }
+      await setPinnedMut({ variables: { productIds: order } });
       onClose();
     } catch (e) {
       setError(getErrorMessage(e));
@@ -208,13 +169,19 @@ function ProductPicker({
       onClick={onClose}
     >
       <div
-        className="max-h-[85vh] w-full max-w-lg overflow-hidden rounded-2xl bg-surface shadow-xl"
+        className="w-full max-w-md overflow-hidden rounded-2xl bg-surface shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start gap-3 border-b border-outline-variant/30 px-5 py-4">
           <div className="min-w-0 flex-1">
-            <h3 className="text-base font-extrabold text-on-surface">{title}</h3>
-            <p className="mt-0.5 text-xs text-on-surface-variant">{subtitle}</p>
+            <h3 className="text-base font-extrabold text-on-surface">
+              Reordenar anuncios fijados
+            </h3>
+            <p className="mt-0.5 text-xs text-on-surface-variant">
+              Cambia el orden con las flechas. Para fijar o quitar un anuncio,
+              usa el botón <Pin size={10} className="inline align-middle" /> de
+              la card.
+            </p>
           </div>
           <button
             onClick={onClose}
@@ -225,110 +192,54 @@ function ProductPicker({
           </button>
         </div>
 
-        {selected.length > 0 && (
-          <div className="border-b border-outline-variant/30 bg-surface-container/40 px-5 py-3">
-            <p className="mb-2 text-[11px] font-extrabold uppercase tracking-wide text-on-surface-variant">
-              Orden (arrastra o usa flechas)
-            </p>
-            <ol className="space-y-1.5">
-              {selected.map((id, idx) => {
-                const p = active.find((x) => x.id === id);
-                if (!p) return null;
-                return (
-                  <li
-                    key={id}
-                    className="flex items-center gap-2 rounded-lg bg-surface-lowest px-2 py-1.5 text-sm"
+        <ol className="max-h-[55vh] space-y-1.5 overflow-y-auto px-5 py-4">
+          {order.map((id, idx) => {
+            const p = productMap.get(id);
+            const img = p?.images?.[0]?.url;
+            return (
+              <li
+                key={id}
+                className="flex items-center gap-3 rounded-xl border border-outline-variant/30 bg-surface-lowest p-2"
+              >
+                <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-primary/15 text-[11px] font-bold text-primary">
+                  {idx + 1}
+                </span>
+                {img ? (
+                  <img
+                    src={resolveImage(img)}
+                    alt=""
+                    className="h-10 w-10 shrink-0 rounded-lg object-cover"
+                  />
+                ) : (
+                  <div className="h-10 w-10 shrink-0 rounded-lg bg-surface-container" />
+                )}
+                <p className="line-clamp-1 flex-1 text-sm font-semibold text-on-surface">
+                  {p?.title ?? "Anuncio"}
+                </p>
+                <div className="flex gap-1">
+                  <button
+                    type="button"
+                    onClick={() => move(idx, -1)}
+                    disabled={idx === 0}
+                    aria-label="Subir"
+                    className="grid h-7 w-7 place-items-center rounded text-on-surface-variant transition hover:bg-surface-container disabled:opacity-30"
                   >
-                    <span className="grid h-5 w-5 place-items-center rounded-full bg-primary/15 text-[11px] font-bold text-primary">
-                      {idx + 1}
-                    </span>
-                    <span className="line-clamp-1 flex-1">{p.title}</span>
-                    <div className="flex gap-1">
-                      <button
-                        type="button"
-                        onClick={() => move(idx, -1)}
-                        disabled={idx === 0}
-                        className="grid h-6 w-6 place-items-center rounded text-xs text-on-surface-variant disabled:opacity-30 hover:bg-surface-container"
-                      >
-                        ↑
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => move(idx, 1)}
-                        disabled={idx === selected.length - 1}
-                        className="grid h-6 w-6 place-items-center rounded text-xs text-on-surface-variant disabled:opacity-30 hover:bg-surface-container"
-                      >
-                        ↓
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => toggle(id)}
-                        className="grid h-6 w-6 place-items-center rounded text-xs text-danger hover:bg-danger/10"
-                      >
-                        <X size={12} />
-                      </button>
-                    </div>
-                  </li>
-                );
-              })}
-            </ol>
-          </div>
-        )}
-
-        <div className="max-h-[45vh] overflow-y-auto px-5 py-3">
-          {active.length === 0 ? (
-            <p className="py-8 text-center text-sm text-muted">
-              No tienes anuncios activos que puedas fijar.
-            </p>
-          ) : (
-            <ul className="space-y-2">
-              {active.map((p) => {
-                const isSel = selected.includes(p.id);
-                const img = p.images?.[0]?.url;
-                return (
-                  <li key={p.id}>
-                    <button
-                      type="button"
-                      onClick={() => toggle(p.id)}
-                      className={`flex w-full items-center gap-3 rounded-xl border p-2 text-left transition ${
-                        isSel
-                          ? "border-primary/50 bg-primary/5"
-                          : "border-outline-variant/30 hover:bg-surface-container"
-                      }`}
-                    >
-                      {img ? (
-                        <img
-                          src={resolveImage(img)}
-                          alt=""
-                          className="h-12 w-12 shrink-0 rounded-lg object-cover"
-                        />
-                      ) : (
-                        <div className="h-12 w-12 shrink-0 rounded-lg bg-surface-container" />
-                      )}
-                      <div className="min-w-0 flex-1">
-                        <p className="line-clamp-1 text-sm font-semibold text-on-surface">
-                          {p.title}
-                        </p>
-                        <p className="text-[11px] text-on-surface-variant">
-                          {Number(p.price).toLocaleString("es")} XAF
-                        </p>
-                      </div>
-                      <span
-                        className={`grid h-6 w-6 place-items-center rounded-full text-white ${
-                          isSel
-                            ? "bg-primary"
-                            : "bg-outline-variant/30 text-transparent"
-                        }`}
-                      >
-                        <Check size={14} strokeWidth={3} />
-                      </span>
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </div>
+                    ↑
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => move(idx, 1)}
+                    disabled={idx === order.length - 1}
+                    aria-label="Bajar"
+                    className="grid h-7 w-7 place-items-center rounded text-on-surface-variant transition hover:bg-surface-container disabled:opacity-30"
+                  >
+                    ↓
+                  </button>
+                </div>
+              </li>
+            );
+          })}
+        </ol>
 
         {error && (
           <div className="flex items-center gap-2 border-t border-danger/30 bg-danger/10 px-5 py-2 text-xs text-danger">
@@ -336,29 +247,23 @@ function ProductPicker({
           </div>
         )}
 
-        <div className="flex items-center justify-between gap-3 border-t border-outline-variant/30 px-5 py-3">
-          <p className="text-xs text-on-surface-variant">
-            <strong className="text-on-surface">{selected.length}</strong> /{" "}
-            {limit} seleccionados
-          </p>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-xl px-4 py-2 text-sm font-semibold text-on-surface-variant hover:bg-surface-container"
-            >
-              Cancelar
-            </button>
-            <button
-              type="button"
-              onClick={onSave}
-              disabled={saving}
-              className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-on-primary disabled:opacity-60"
-            >
-              {saving && <Loader2 size={14} className="animate-spin" />}
-              Guardar
-            </button>
-          </div>
+        <div className="flex items-center justify-end gap-2 border-t border-outline-variant/30 px-5 py-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-xl px-4 py-2 text-sm font-semibold text-on-surface-variant hover:bg-surface-container"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            onClick={onSave}
+            disabled={saving}
+            className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-on-primary disabled:opacity-60"
+          >
+            {saving && <Loader2 size={14} className="animate-spin" />}
+            Guardar orden
+          </button>
         </div>
       </div>
     </div>
