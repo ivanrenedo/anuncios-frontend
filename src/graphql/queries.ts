@@ -175,6 +175,7 @@ const PRODUCT_CARD_FIELDS = `
   favoritesCount
   bumpedAt
   boostedUntil
+  priceReducedUntil
   createdAt
   seller {
     id
@@ -236,6 +237,7 @@ export const GET_PRODUCT = gql`
       favoritesCount
       bumpedAt
       boostedUntil
+      priceReducedUntil
       createdAt
       seller {
         id

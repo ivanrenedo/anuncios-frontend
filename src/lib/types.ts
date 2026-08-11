@@ -80,6 +80,7 @@ export interface Product {
   impressions?: number;
   bumpedAt?: string;
   boostedUntil?: string | null;
+  priceReducedUntil?: string | null;
   createdAt?: string;
   seller?: Seller;
   category?: Category;
