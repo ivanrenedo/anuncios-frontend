@@ -160,6 +160,14 @@ function ExploreInner() {
     if (debouncedPriceMin) input.priceMin = Number(debouncedPriceMin);
     if (debouncedPriceMax) input.priceMax = Number(debouncedPriceMax);
     if (activeConditions.length === 1) input.condition = activeConditions[0];
+    if (activeEngines.length > 0) input.engines = activeEngines;
+    if (activeTransmissions.length > 0)
+      input.transmissions = activeTransmissions;
+    if (operation) input.operation = operation;
+    if (filterOfferType) input.offerType = filterOfferType;
+    if (filterBedrooms > 0) input.bedroomsMin = filterBedrooms;
+    if (filterBathrooms > 0) input.bathroomsMin = filterBathrooms;
+    if (surfaceMin) input.surfaceMin = Number(surfaceMin);
     if (sortOrder === "price_asc" || sortOrder === "price_desc")
       input.sortBy = sortOrder;
     return input;
@@ -170,6 +178,13 @@ function ExploreInner() {
     debouncedPriceMin,
     debouncedPriceMax,
     activeConditions,
+    activeEngines,
+    activeTransmissions,
+    operation,
+    filterOfferType,
+    filterBedrooms,
+    filterBathrooms,
+    surfaceMin,
     sortOrder,
   ]);
 
