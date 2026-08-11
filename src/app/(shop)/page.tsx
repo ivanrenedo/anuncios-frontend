@@ -27,6 +27,7 @@ import PromoCarousel from "@/components/home/PromoCarousel";
 import CategoryRail from "@/components/home/CategoryRail";
 import SectionHeader from "@/components/SectionHeader";
 import ProductRail from "@/components/ProductRail";
+import PremiumStoresRail from "@/components/home/PremiumStoresRail";
 import ProductGrid from "@/components/ProductGrid";
 import Skeleton from "@/components/Skeleton";
 import { useUnreadCount } from "@/hooks/useNotifications";
@@ -234,6 +235,10 @@ export default function HomePage() {
           </section>
         )}
 
+        {/* v2 Fase 6b.2 — Tiendas Premium. Auto-hides when the day's carousel
+            is empty (no active Premium sellers picked by the cron). */}
+        <PremiumStoresRail />
+
         {/* Inline CTA — only when the logged-in user has zero listings.
             Same placement as mobile (right after the categories rail). */}
         {showInlineCta && (
@@ -283,7 +288,15 @@ export default function HomePage() {
                 <TrackedSection section={section} trackEvent={trackEvent} />
                 {idx === firstProductIdx && firstProductIdx !== -1 && (
                   <>
-                  <AdSenseSlot slot="" width={728} height={90} className="mx-auto mt-5"  />
+                  {/* v2 Fase 12 — 320×50 en mobile (<sm), 728×90 en ≥sm (tablet+desktop) */}
+                  <AdSenseSlot
+                    slot=""
+                    width={728}
+                    height={90}
+                    mobileWidth={320}
+                    mobileHeight={100}
+                    className="mx-auto mt-5"
+                  />
                     <section className="px-4 pt-6 sm:px-6">
                       <div className="grid grid-cols-3 gap-3">
                         <TrustCell

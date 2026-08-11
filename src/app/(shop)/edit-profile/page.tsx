@@ -54,20 +54,6 @@ export default function EditProfilePage() {
     }
   }, [profile]);
 
-  /**
-   * Persist a single field without going through the form's Guardar button.
-   * Used by the auto-save flows below so a user who changes an image or a
-   * toggle and then leaves the page doesn't lose the change. Errors surface
-   * via `errorMsg`, no reload required.
-   */
-  const persistField = async (patch: Record<string, unknown>) => {
-    try {
-      await updateProfile(patch);
-    } catch (err: any) {
-      setErrorMsg(err?.message || "No se pudo guardar el cambio.");
-    }
-  };
-
   if (!authLoading && !isAuthenticated) {
     return (
       <div className="px-6 py-28 text-center">

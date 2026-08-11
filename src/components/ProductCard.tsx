@@ -14,7 +14,9 @@ import {
   Pencil,
   Trash2,
   Loader2,
-  Clock,
+  Clock, 
+  Flame,
+  Pin,
 } from "lucide-react";
 import type { Product } from "@/lib/types";
 import { resolveImage } from "@/lib/config";
@@ -31,9 +33,26 @@ interface Props {
    * no sense.
    */
   ownerActions?: boolean;
+  /** v2 Fase 11.2 — muestra un badge 📌 en la esquina cuando el producto
+   *  está fijado por el vendedor en su perfil. */
+  isPinned?: boolean;
+  /** v2 Fase 11.3 — muestra un badge ⚡ cuando el producto está en el pool
+   *  de auto-bump del vendedor. */
+  isAutoBumped?: boolean;
+  /** v2 Fase 11.3 — toggle handler; presencia habilita botón pin en owner. */
+  onTogglePin?: () => void;
+  /** v2 Fase 11.3 — toggle handler; presencia habilita botón auto-bump en owner. */
+  onToggleAutoBump?: () => void;
 }
 
-export default function ProductCard({ product, ownerActions = false }: Props) {
+export default function ProductCard({
+  product,
+  ownerActions = false,
+  isPinned = false,
+  isAutoBumped = false,
+  onTogglePin,
+  onToggleAutoBump,
+}: Props) {
   const { toggle, canFavorite } = useToggleFavorite();
   const favoriteIds = useFavoriteIds();
   const router = useRouter();
@@ -58,6 +77,14 @@ export default function ProductCard({ product, ownerActions = false }: Props) {
   const sellerPlan = product.seller?.plan;
 
   const hasDiscount = (product.discount ?? 0) > 0 && (product.discount ?? 0) < 100;
+
+  // "Rebajado hoy" chip (v2 Fase 6a). Backend stamps `priceReducedUntil` on
+  // any price drop for 48 h; the chip is gated to Star/Premium sellers here
+  // so BASIC and FREE sellers never render it even if the timestamp is set.
+  const showRebajadoChip =
+    !!product.priceReducedUntil &&
+    new Date(product.priceReducedUntil) > new Date() &&
+    (sellerPlan === "STAR" || sellerPlan === "PREMIUM");
 
     const tags: { label: string; bg: string; color: string }[] = [];
   if (product.propertyDetail?.operation || product.vehicleDetail?.operation) tags.push({ label: product.propertyDetail?.operation! ?? product.vehicleDetail?.operation!, bg: '#E1F5EE', color: '#0F6E56' });
@@ -147,7 +174,7 @@ export default function ProductCard({ product, ownerActions = false }: Props) {
             {product.condition}
           </span>
         )}
-
+      
        {tags.length > 0 && (
           <div className={`absolute top-2 left-2 row flex flex-wrap gap-1 max-w-[70%] z-8`} style={{...(overlayLayers > 0 && { top: 8 + overlayLayers * 26 })}}>
             {tags.map((t) => (
@@ -176,9 +203,63 @@ export default function ProductCard({ product, ownerActions = false }: Props) {
             >
               <Trash2 size={15} strokeWidth={1.9} />
             </button>
+            {/* v2 Fase 11.3 — pin y auto-bump por anuncio. Fill del icono =
+                estado activo. Sólo se renderizan si el padre pasó los
+                handlers, que a su vez se gatean por plan (Star/Premium). */}
+            {onTogglePin && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onTogglePin();
+                }}
+                aria-label={isPinned ? "Desfijar del perfil" : "Fijar en perfil"}
+                title={isPinned ? "Fijado en tu perfil" : "Fijar en tu perfil"}
+                className={`grid h-8 w-8 place-items-center rounded-full backdrop-blur transition ${
+                  isPinned
+                    ? "bg-primary text-white hover:bg-primary/90"
+                    : "bg-black/45 text-white hover:bg-black/65"
+                }`}
+              >
+                <Pin
+                  size={14}
+                  strokeWidth={2}
+                  fill={isPinned ? "currentColor" : "none"}
+                />
+              </button>
+            )}
+            {onToggleAutoBump && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onToggleAutoBump();
+                }}
+                aria-label={
+                  isAutoBumped ? "Quitar de auto-bump" : "Añadir a auto-bump"
+                }
+                title={
+                  isAutoBumped ? "En pool de auto-bump" : "Añadir a auto-bump"
+                }
+                className={`grid h-8 w-8 place-items-center rounded-full backdrop-blur transition ${
+                  isAutoBumped
+                    ? "bg-amber-500 text-white hover:bg-amber-600"
+                    : "bg-black/45 text-white hover:bg-black/65"
+                }`}
+              >
+                <Zap
+                  size={14}
+                  strokeWidth={2}
+                  fill={isAutoBumped ? "currentColor" : "none"}
+                />
+              </button>
+            )}
           </div>
         ) : (
-          canFavorite && (
+          <>
+          {canFavorite && (
             <button
               onClick={onLike}
               aria-label={liked ? "Quitar de favoritos" : "Guardar"}
@@ -190,7 +271,32 @@ export default function ProductCard({ product, ownerActions = false }: Props) {
                 strokeWidth={1.6}
               />
             </button>
-          )
+          )}
+            {/* v2 Fase 11.2/11.3 — status del pin y auto-bump. Se apilan en la
+            esquina inferior derecha para no chocar con el heart / owner
+            actions arriba. Fill del icono = activo (los props isPinned /
+            isAutoBumped vienen del contexto del perfil dueño). */}
+            {(isPinned || isAutoBumped) && (
+              <div className="absolute top-3 right-12 flex flex-col gap-1">
+                {isPinned && (
+                  <span
+                    title="Anuncio fijado en tu perfil"
+                    className="grid h-6 w-6 place-items-center rounded-full bg-primary/90 text-white shadow"
+                  >
+                    <Pin size={12} strokeWidth={2.5} fill="currentColor" />
+                  </span>
+                )}
+                {isAutoBumped && (
+                  <span
+                    title="En pool de auto-bump"
+                    className="grid h-6 w-6 place-items-center rounded-full bg-amber-500 text-white shadow"
+                  >
+                    <Zap size={12} strokeWidth={2.5} fill="currentColor" />
+                  </span>
+                )}
+              </div>
+            )}
+          </>
         )}
 
         {/* Owner delete confirmation overlay — sits on top of the image with
@@ -231,19 +337,29 @@ export default function ProductCard({ product, ownerActions = false }: Props) {
             </div>
           </div>
         )}
+          
       </div>
 
       {/* Body */}
       <div className="px-3 py-4 group-[.grid]:px-2 group-[.grid]:py-3 sm:group-[.grid]:px-3 sm:group-[.grid]:py-4 sm:px-3 sm:py-4 flex flex-col flex-1">
         {/* Price first — the strongest signal */}
         <div className="flex flex-col flex-1">
-          <div className="flex flex-wrap gap-1.5 items-start leading-3">
-            <span className={`text-[17px] group-[.grid]:text-base sm:text-lg font-bold leading-5 ${price.hasDiscount ? "text-danger" : "text-primary"}`}>
+          <div className="flex flex-wrap gap-1.5 items-center leading-3">
+            {price.final > 0 ?(<span className={`text-[17px] group-[.grid]:text-base sm:text-lg font-bold leading-5 ${price.hasDiscount ? "text-danger" : "text-primary"}`}>
               {formatPrice(price.final)}
-            </span>
+            </span>) : <></>}
             {price.hasDiscount && (
               <span className="text-[13px] group-[.grid]:text-[11px] text-muted line-through">
                 {formatPrice(price.original)}
+              </span>
+            )}
+            {showRebajadoChip && (
+              <span
+                title="Precio bajado en las últimas 48 horas"
+                className="inline-flex items-center gap-0.5 rounded-full bg-orange-500/15 px-1.5 py-0.5 text-[10px] font-extrabold uppercase leading-none tracking-wide text-orange-600"
+              >
+                <Flame size={9} strokeWidth={2.5} />
+                Rebajado
               </span>
             )}
           </div>

@@ -1,19 +1,14 @@
-import type { Metadata } from "next";
-import { Manrope } from "next/font/google";
+import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import "./globals.css";
 import Providers from "@/components/Providers";
 
-const manrope = Manrope({
-  variable: "--font-manrope",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
-});
-
 export const metadata: Metadata = {
-  title: "Bomelh — Comprar y vender en Guinea Ecuatorial",
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SHARE_URL || "https://bomelh.com"),
+  title: "Bomelh - Comprar y vender en Guinea Ecuatorial",
   description:
     "El marketplace de Guinea Ecuatorial. Compra y vende moda, tecnología, coches, hogar y servicios cerca de ti.",
+  manifest: "/manifest.webmanifest",
   icons: {
     icon: [
       { url: "/favicon.png", sizes: "48x48", type: "image/png" },
@@ -22,10 +17,8 @@ export const metadata: Metadata = {
     ],
     apple: "/apple-touch-icon.png",
   },
-  
-  themeColor: "#006b5e",
   openGraph: {
-    title: "Bomelh — El marketplace de Guinea Ecuatorial",
+    title: "Bomelh - El marketplace de Guinea Ecuatorial",
     description:
       "Compra y vende cerca de ti, con vendedores verificados. Malabo, Bata y toda Guinea Ecuatorial.",
     images: [{ url: "/icon-512.png", width: 512, height: 512 }],
@@ -34,14 +27,12 @@ export const metadata: Metadata = {
   },
 };
 
-// Runs before paint so the correct theme class is on <html> with no flash.
+export const viewport: Viewport = {
+  themeColor: "#006b5e",
+};
+
 const themeScript = `(function(){try{var m=localStorage.getItem('market_theme')||'system';var d=m==='dark'||(m==='system'&&window.matchMedia('(prefers-color-scheme: dark)').matches);if(d)document.documentElement.classList.add('dark');}catch(e){}})();`;
 
-// Google Consent Mode v2 defaults — DEBE ejecutarse ANTES de que se cargue
-// cualquier tag de Google (AdSense, GA4). Empieza con TODO denegado; luego
-// el hook `useCookieConsent` empuja la elección real del usuario si ya
-// existe en localStorage. Sin esto, Google inicializaría con "unknown" y
-// AdSense podría cargar cookies antes de que el usuario decidiera.
 const consentDefaultsScript = `
 (function(){
   window.dataLayer = window.dataLayer || [];
@@ -82,12 +73,8 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="es" className={`${manrope.variable} h-full`} suppressHydrationWarning>
+    <html lang="es" className="h-full" suppressHydrationWarning>
       <body className="min-h-full bg-surface text-on-surface antialiased">
-        {/* Ambos scripts deben ejecutarse ANTES de la hidratación. Usamos
-            `next/script` con `beforeInteractive` para evitar el warning
-            "Encountered a script tag while rendering React component" y para
-            que Next los inline en la respuesta SSR. */}
         <Script
           id="theme-init"
           strategy="beforeInteractive"

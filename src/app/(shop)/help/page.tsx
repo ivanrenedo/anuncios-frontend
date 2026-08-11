@@ -53,19 +53,19 @@ const FAQ_DATA: (( email: string, whatsapp: string) => FaqSection)[] = [
     color: "var(--color-tertiary)",
     items: [
       {
-        q: "Como publico un anuncio?",
-        a: 'Ve a "Publicar", elige el tipo de anuncio (marketplace, vehiculos, inmobiliaria, servicios o empleo), rellena los campos y anade fotos. Revisa la vista previa y pulsa "Publicar".',
+        q: "¿Cómo publico un anuncio?",
+        a: 'Ve a "Publicar", elige el tipo de anuncio (marketplace, vehículos, inmobiliaria, servicios o empleo), rellena los campos y añade fotos. Revisa la vista previa y pulsa "Publicar".',
       },
       {
-        q: "Cuantas fotos puedo subir?",
-        a: "Depende de tu plan. Con el plan Gratis puedes subir hasta 4 fotos por anuncio. Los planes Estrella y Premium permiten mas fotos.",
+        q: "¿Cuántas fotos puedo subir?",
+        a: "Depende de tu plan. Con el plan Gratis puedes subir hasta 4 fotos por anuncio. Los planes Estrella y Premium permiten más fotos.",
       },
       {
-        q: "Puedo editar mi anuncio despues de publicarlo?",
-        a: 'Si. Ve a tu perfil, en la seccion "Mis anuncios" encontraras un icono de editar en cada anuncio. Podras modificar cualquier campo, incluyendo fotos, precio y descripcion.',
+        q: "¿Puedo editar mi anuncio después de publicarlo?",
+        a: 'Sí. Ve a tu perfil, en la sección "Mis anuncios" encontrarás un icono de editar en cada anuncio. Podrás modificar cualquier campo, incluyendo fotos, precio y descripción.',
       },
       {
-        q: "Publicar anuncios tiene algun coste?",
+        q: "¿Publicar anuncios tiene algún coste?",
         a: "No. Publicar anuncios en Bomelh es completamente gratuito.",
       },
     ],
@@ -76,16 +76,16 @@ const FAQ_DATA: (( email: string, whatsapp: string) => FaqSection)[] = [
     color: "var(--color-secondary)",
     items: [
       {
-        q: "Como edito mi perfil?",
-        a: 'En tu perfil, pulsa el boton "Editar perfil". Podras cambiar tu nombre, ubicacion, biografia, foto de perfil y foto de portada.',
+        q: "¿Cómo edito mi perfil?",
+        a: 'En tu perfil, pulsa el botón "Editar perfil". Podrás cambiar tu nombre, ubicación, biografía, foto de perfil y foto de portada.',
       },
       {
-        q: "Como elimino mi cuenta?",
-        a: 'En tu perfil, baja hasta la seccion "Cuenta" y pulsa "Eliminar cuenta". Se borraran permanentemente todos tus datos: anuncios, valoraciones, seguidores y favoritos. Esta accion no se puede deshacer.',
+        q: "¿Cómo elimino mi cuenta?",
+        a: 'En tu perfil, baja hasta la sección "Cuenta" y pulsa "Eliminar cuenta". Se borrarán permanentemente todos tus datos: anuncios, valoraciones, seguidores y favoritos. Esta acción no se puede deshacer.',
       },
       {
-        q: "Puedo ocultar mi telefono o email?",
-        a: 'Si. Ve a Ajustes y desactiva "Mostrar telefono" o "Mostrar email". Los demas usuarios no podran verlos en tu perfil publico.',
+        q: "¿Puedo ocultar mi teléfono o email?",
+        a: 'Sí. Ve a Ajustes y desactiva "Mostrar teléfono" o "Mostrar email". Los demás usuarios no podrán verlos en tu perfil público.',
       },
     ],
   }),
@@ -95,31 +95,31 @@ const FAQ_DATA: (( email: string, whatsapp: string) => FaqSection)[] = [
     color: "var(--color-danger)",
     items: [
       {
-        q: "Como reporto un usuario o anuncio?",
-        a: 'En el perfil del usuario o en el detalle del producto, pulsa el boton "Reportar". Elige el motivo y envia tu reporte. Nuestro equipo lo revisara lo antes posible.',
+        q: "¿Cómo reporto un usuario o anuncio?",
+        a: 'En el perfil del usuario o en el detalle del producto, pulsa el botón "Reportar". Elige el motivo y envía tu reporte. Nuestro equipo lo revisará lo antes posible.',
       },
       {
-        q: "Que hago si me estafan?",
-        a: "Reporta al usuario inmediatamente desde su perfil. Contacta con nuestro equipo de soporte para que podamos tomar medidas. Si la estafa involucra dinero, te recomendamos tambien denunciarlo ante las autoridades locales.",
+        q: "¿Qué hago si me estafan?",
+        a: "Reporta al usuario inmediatamente desde su perfil. Contacta con nuestro equipo de soporte para que podamos tomar medidas. Si la estafa involucra dinero, te recomendamos también denunciarlo ante las autoridades locales.",
       },
       {
         q: "Consejos para compras seguras",
-        a: "Queda en lugares publicos y concurridos para hacer el intercambio.\nNo envies dinero por adelantado a desconocidos.\nRevisa el producto antes de pagar.\nDesconfia de precios demasiado bajos.\nVerifica el perfil del vendedor: valoraciones, tiempo en la plataforma y verificacion.",
+        a: "Queda en lugares públicos y concurridos para hacer el intercambio.\nNo envíes dinero por adelantado a desconocidos.\nRevisa el producto antes de pagar.\nDesconfía de precios demasiado bajos.\nVerifica el perfil del vendedor: valoraciones, tiempo en la plataforma y verificación.",
       },
     ],
   }),
   () => ({
-    title: "Envios y entregas",
+    title: "Envíos y entregas",
     Icon: Truck,
     color: "var(--color-on-surface-variant)",
     items: [
       {
-        q: "Como se hace la entrega?",
-        a: "La entrega se acuerda entre comprador y vendedor. Lo mas habitual es quedar en persona en un lugar publico. Coordina los detalles por telefono o WhatsApp antes de la cita.",
+        q: "¿Cómo se hace la entrega?",
+        a: "La entrega se acuerda entre comprador y vendedor. Lo más habitual es quedar en persona en un lugar público. Coordina los detalles por teléfono o WhatsApp antes de la cita.",
       },
       {
-        q: "Hay envios entre ciudades?",
-        a: "Bomelh no gestiona envios, pero muchos vendedores envian productos entre Malabo y Bata usando servicios de transporte locales. Consulta directamente con el vendedor las opciones disponibles y los costes.",
+        q: "¿Hay envíos entre ciudades?",
+        a: "Bomelh no gestiona envíos, pero muchos vendedores envían productos entre Malabo y Bata usando servicios de transporte locales. Consulta directamente con el vendedor las opciones disponibles y los costes.",
       },
     ],
   }),
@@ -133,12 +133,12 @@ const FAQ_DATA: (( email: string, whatsapp: string) => FaqSection)[] = [
         a: "Todos los precios se muestran en francos CFA (XAF), la moneda oficial de Guinea Ecuatorial.",
       },
       {
-        q: "Se puede negociar el precio?",
-        a: "Si. Los precios publicados son orientativos. Puedes contactar al vendedor y negociar directamente. Es una practica habitual y aceptada.",
+        q: "¿Se puede negociar el precio?",
+        a: "Sí. Los precios publicados son orientativos. Puedes contactar al vendedor y negociar directamente. Es una práctica habitual y aceptada.",
       },
       {
-        q: "Que metodos de pago se usan?",
-        a: "El metodo de pago se acuerda entre comprador y vendedor. Los mas comunes en Guinea Ecuatorial son: efectivo, transferencia bancaria y pago movil.",
+        q: "¿Qué métodos de pago se usan?",
+        a: "El método de pago se acuerda entre comprador y vendedor. Los más comunes en Guinea Ecuatorial son: efectivo, transferencia bancaria y pago móvil.",
       },
     ],
   }),
@@ -148,7 +148,7 @@ const FAQ_DATA: (( email: string, whatsapp: string) => FaqSection)[] = [
     color: "var(--color-primary)",
     items: [
       {
-        q: "Como contacto al equipo de Bomelh?",
+        q: "¿Cómo contacto al equipo de Bomelh?",
         a: `Puedes escribirnos por email a ${email} o por contacto al ${whatsapp}. Respondemos de lunes a viernes, de 9:00 a 18:00.`,
       },
       {

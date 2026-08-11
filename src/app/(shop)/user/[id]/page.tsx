@@ -19,12 +19,13 @@ import {
   Package,
   Share2,
   MessageSquare,
+  MessageCircle,
   Edit3,
   Trash2,
   Loader2,
 } from "lucide-react";
 import { GET_USER } from "@/graphql/queries";
-import { PRODUCTS_BY_SELLER } from "@/graphql/queries";
+import { PRODUCTS_BY_SELLER, PINNED_PRODUCTS } from "@/graphql/queries";
 import { useAuth } from "@/hooks/useAuth";
 import {
   useFollowers,
@@ -43,6 +44,7 @@ import {
 } from "@/hooks/useReviews";
 import { useRefetchOnFocus } from "@/hooks/useRefetchOnFocus";
 import { useShare } from "@/hooks/useShare";
+import { useBusinessContact } from "@/hooks/useBusinessContact";
 import { resolveImage } from "@/lib/config";
 import { formatDate, formatNumber, timeAgo } from "@/lib/format";
 import ProductGrid from "@/components/ProductGrid";
@@ -81,6 +83,15 @@ export default function PublicUserProfile() {
     fetchPolicy: "cache-and-network",
   }) as { data: any; loading: boolean; refetch: () => Promise<any> };
 
+  // v2 Fase 6a.5: pinned products render before the main grid on Star/Premium
+  // seller profiles. The query is public but returns [] for plans that can't
+  // pin anything, so we can call it unconditionally without a plan gate.
+  const { data: pinnedData } = useQuery(PINNED_PRODUCTS, {
+    variables: { userId: id },
+    skip: !id,
+    fetchPolicy: "cache-and-network",
+  }) as { data: any };
+
   const {
     average: avgRating,
     count: ratingCount,
@@ -104,6 +115,23 @@ export default function PublicUserProfile() {
 
   const { follow, unfollow } = useFollowToggle();
   const { share } = useShare();
+  const { phone: businessPhone } = useBusinessContact();
+
+  // v2 Fase 12 (extend Fase 6a.7 pattern to profile) — WhatsApp del perfil:
+  //   · Star/Premium con phone: chat directo con el vendedor
+  //   · Free/Basic o sin phone: cae al número del negocio como intermediario
+  // Mismo gate que /product/[id] para que la experiencia sea consistente.
+  const sellerCanPersonalWa =
+    (user?.plan === "STAR" || user?.plan === "PREMIUM") && !!user?.phone;
+  const waRawNumber = sellerCanPersonalWa ? user?.phone : businessPhone;
+  const waNumber = waRawNumber ? waRawNumber.replace(/[^0-9]/g, "") : "";
+  const waHref = waNumber
+    ? `https://wa.me/${waNumber}?text=${encodeURIComponent(
+        sellerCanPersonalWa
+          ? `Hola, vi tu perfil en Bomelh — ${user?.name ?? ""}`
+          : `Hola, quiero contactar con el vendedor "${user?.name ?? ""}" en Bomelh.`,
+      )}`
+    : "";
 
   // Freshness on tab focus — follow-back, new reviews, new listings all show
   // up without a manual refresh.
@@ -126,6 +154,46 @@ export default function PublicUserProfile() {
 
   const products: Product[] = prodData?.productsBySeller ?? [];
   const visibleProducts = products.filter((p) => p.status !== "hide");
+  const pinnedProducts: Product[] = pinnedData?.pinnedProducts ?? [];
+  const pinnedIds = new Set(pinnedProducts.map((p) => p.id));
+
+  // v2 Fase 11.2 — el perfil ES la tienda para Premium. Merge de pinned +
+  // resto en una sola lista, pinned primero (por orden dado por el server),
+  // no-pinned después por orden natural. El icono 📌 en la card viene por
+  // props del ProductGrid.
+  const sortedProducts = [
+    ...pinnedProducts,
+    ...visibleProducts.filter((p) => !pinnedIds.has(p.id)),
+  ];
+
+  // v2 Fase 11.2 — para Premium, exponemos las categorías del vendedor como
+  // tabs (siguiendo el patrón de mobile). Se muestra solo si hay >1 categoría
+  // distinta en su catálogo activo.
+  const isPremiumActive =
+    user?.plan === "PREMIUM" &&
+    (!user?.planExpiresAt || new Date(user.planExpiresAt) > new Date());
+  const categoryTabs = (() => {
+    if (!isPremiumActive) return [];
+    const map = new Map<string, string>();
+    for (const p of visibleProducts) {
+      if (p.category?.id && p.category?.label) {
+        map.set(p.category.id, p.category.label);
+      }
+    }
+    return Array.from(map.entries()).map(([id, label]) => ({ id, label }));
+  })();
+  const [selectedCat, setSelectedCat] = useState<string | null>(null);
+  const filteredSorted = selectedCat
+    ? sortedProducts.filter((p) => p.category?.id === selectedCat)
+    : sortedProducts;
+
+  const verifiedSince =
+    isPremiumActive && user?.businessVerifiedAt
+      ? new Date(user.businessVerifiedAt).toLocaleDateString("es-ES", {
+          month: "long",
+          year: "numeric",
+        })
+      : null;
 
   const planLabel =
     user?.plan === "PREMIUM"
@@ -269,7 +337,6 @@ export default function PublicUserProfile() {
                 <BadgeCheck
                   size={20}
                   className="fill-primary text-white"
-                  strokeWidth={0}
                 />
               )}
               {planLabel && (
@@ -322,9 +389,37 @@ export default function PublicUserProfile() {
             </div>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
+            {/* v2 Fase 11.2 — "Ver tienda" CTA retirado: el perfil de un
+                Premium ES la tienda. Verificado since chip informa el status
+                del negocio directamente sobre la avatar/header. */}
+            {verifiedSince && (
+              <span className="inline-flex items-center gap-1.5 rounded-lg bg-purple-600 px-3 py-2 text-xs font-extrabold uppercase tracking-wide text-white">
+                <Crown size={13} strokeWidth={2.5} />
+                Verificado desde {verifiedSince}
+              </span>
+            )}
             {!isOwn && (
               <>
+                {/* v2 Fase 12 — WhatsApp: acción primaria para contactar al
+                    vendedor / a su tienda. Verde emerald para diferenciar
+                    visualmente de "Seguir" (primary) y "Denunciar" (danger). */}
+                {sellerCanPersonalWa && (
+                  <a
+                    href={waHref}
+                    target="_blank"
+                    rel="noreferrer"
+                    aria-label={
+                      sellerCanPersonalWa
+                        ? "Escribir por WhatsApp al vendedor"
+                        : "Contactar por WhatsApp (soporte)"
+                    }
+                    className="flex items-center gap-1.5 rounded-lg bg-emerald-500 px-4 py-2 text-sm font-bold text-white transition hover:bg-emerald-600"
+                  >
+                    <MessageCircle size={16} strokeWidth={2} />
+                    WhatsApp
+                  </a>
+                )}
                 <button
                   onClick={onToggleFollow}
                   className={`flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-bold transition ${
@@ -398,11 +493,51 @@ export default function PublicUserProfile() {
               Este usuario no tiene anuncios publicados.
             </p>
           ) : (
-            <ProductGrid
-              products={visibleProducts}
-              loading={prodLoading}
-              pageSize={16}
-            />
+            <>
+              {/* v2 Fase 11.2 — tabs por categoría en tiendas Premium.
+                  Chip pill horizontal scroll con "Todos" + cada categoría
+                  activa del vendedor. Auto-hide si <2 categorías. */}
+              {categoryTabs.length > 1 && (
+                <div className="mb-4 flex flex-wrap gap-2 px-4 sm:px-6">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedCat(null)}
+                    className={`rounded-full px-3 py-1.5 text-xs font-bold transition ${
+                      selectedCat === null
+                        ? "bg-primary text-on-primary"
+                        : "bg-surface-container text-on-surface-variant hover:bg-surface-high"
+                    }`}
+                  >
+                    Todos ({visibleProducts.length})
+                  </button>
+                  {categoryTabs.map((c) => {
+                    const count = visibleProducts.filter(
+                      (p) => p.category?.id === c.id,
+                    ).length;
+                    return (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => setSelectedCat(c.id)}
+                        className={`rounded-full px-3 py-1.5 text-xs font-bold transition ${
+                          selectedCat === c.id
+                            ? "bg-primary text-on-primary"
+                            : "bg-surface-container text-on-surface-variant hover:bg-surface-high"
+                        }`}
+                      >
+                        {c.label} ({count})
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+              <ProductGrid
+                products={filteredSorted}
+                loading={prodLoading}
+                pageSize={16}
+                pinnedIds={pinnedIds}
+              />
+            </>
           ))}
 
         {tab === "reviews" && (

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   BadgeCheck,
   MapPin,
@@ -27,6 +28,7 @@ import {
   Settings,
   Share2,
   Plus,
+  LogOut,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
@@ -43,11 +45,22 @@ import {
 import { useReviewsBySeller, useSellerRating } from "@/hooks/useReviews";
 import { useRefetchOnFocus } from "@/hooks/useRefetchOnFocus";
 import { useShare } from "@/hooks/useShare";
-import { useQuery } from "@apollo/client/react";
-import { PRODUCTS_BY_SELLER, MY_VIEWS_DAILY } from "@/graphql/queries";
+import { useQuery, useMutation } from "@apollo/client/react";
+import {
+  PRODUCTS_BY_SELLER,
+  MY_VIEWS_DAILY,
+  PINNED_PRODUCTS,
+  MY_AUTO_BUMP_SLOTS,
+} from "@/graphql/queries";
+import {
+  SET_PINNED_PRODUCTS,
+  SET_AUTO_BUMP_SLOTS,
+} from "@/graphql/mutations";
 import { resolveImage } from "@/lib/config";
 import { formatDate, formatNumber, timeAgo } from "@/lib/format";
 import ProductGrid from "@/components/ProductGrid";
+import PlanFeaturesPanel from "@/components/PlanFeaturesPanel";
+import VerificationRequestModal from "@/components/VerificationRequestModal";
 import Skeleton from "@/components/Skeleton";
 import ImageLightbox from "@/components/ImageLightbox";
 import SettingsModal from "@/components/SettingsModal";
@@ -60,14 +73,17 @@ type Tab = "listings" | "reviews" | "followers" | "following";
 const VERIFICATION_COOLDOWN_DAYS = 7;
 
 export default function ProfilePage() {
-  const { user, isAuthenticated, loading: authLoading } = useAuth();
+  const router = useRouter();
+  const { user, isAuthenticated, loading: authLoading, logout } = useAuth();
   const { profile, loading: profileLoading } = useProfile();
   const userId = user?.id ?? "";
 
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [logoutConfirm, setLogoutConfirm] = useState(false);
   const [tab, setTab] = useState<Tab>("listings");
   const [viewerUri, setViewerUri] = useState<string | null>(null);
-  const { share } = useShare(); 
+  const [verificationModalOpen, setVerificationModalOpen] = useState(false);
+  const { share } = useShare();
 
   const {
     data: prodData,
@@ -98,12 +114,68 @@ export default function ProfilePage() {
     request: verificationRequest,
     refetch: refetchVerification,
   } = useVerificationRequest();
-  const { requestVerification, loading: requestingVerification } =
-    useRequestVerification();
+  const { loading: requestingVerification } = useRequestVerification();
 
   const effectivePlan = profile?.effectivePlan ?? profile?.plan ?? "FREE";
   const hasStatsAccess = effectivePlan === "STAR" || effectivePlan === "PREMIUM";
   const hasFullStats = effectivePlan === "PREMIUM";
+  const canPin = effectivePlan === "STAR" || effectivePlan === "PREMIUM";
+  const canAutoBump = canPin;
+
+  // v2 Fase 11.3 — fetch de pinned + slots del owner para poder mostrar el
+  // estado por card y togglear. Skip cuando el plan no lo permite (evita
+  // roundtrips inútiles y errores del server que ya rechaza Free/Basic).
+  const { data: pinnedData, refetch: refetchPinned } = useQuery(
+    PINNED_PRODUCTS,
+    {
+      variables: { userId },
+      skip: !userId || !canPin,
+      fetchPolicy: "cache-and-network",
+    },
+  ) as { data: any; refetch: () => Promise<any> };
+  const { data: slotsData, refetch: refetchSlots } = useQuery(
+    MY_AUTO_BUMP_SLOTS,
+    { skip: !canAutoBump, fetchPolicy: "cache-and-network" },
+  ) as { data: any; refetch: () => Promise<any> };
+  const pinnedIds = new Set<string>(
+    (pinnedData?.pinnedProducts ?? []).map((p: any) => p.id),
+  );
+  const autoBumpedIds = new Set<string>(
+    (slotsData?.myAutoBumpSlots ?? []).map((s: any) => s.productId),
+  );
+
+  const [setPinnedMut] = useMutation(SET_PINNED_PRODUCTS, {
+    refetchQueries: ["PinnedProducts"],
+  });
+  const [setSlotsMut] = useMutation(SET_AUTO_BUMP_SLOTS, {
+    refetchQueries: ["MyAutoBumpSlots"],
+  });
+
+  const togglePin = async (productId: string) => {
+    const current = Array.from(pinnedIds);
+    const next = current.includes(productId)
+      ? current.filter((x) => x !== productId)
+      : [...current, productId];
+    try {
+      await setPinnedMut({ variables: { productIds: next } });
+      refetchPinned();
+    } catch (e: any) {
+      alert(e?.message ?? "No se pudo actualizar los anuncios fijados.");
+    }
+  };
+
+  const toggleAutoBump = async (productId: string) => {
+    const current = Array.from(autoBumpedIds);
+    const next = current.includes(productId)
+      ? current.filter((x) => x !== productId)
+      : [...current, productId];
+    try {
+      await setSlotsMut({ variables: { productIds: next } });
+      refetchSlots();
+    } catch (e: any) {
+      alert(e?.message ?? "No se pudo actualizar el pool de auto-bump.");
+    }
+  };
 
   // Daily views chart is PREMIUM-only.
   const { data: viewsData } = useQuery(MY_VIEWS_DAILY, {
@@ -180,6 +252,7 @@ export default function ProfilePage() {
   const viewsDaily: { date: string; count: number }[] =
     viewsData?.myViewsDaily ?? [];
   const maxDaily = Math.max(1, ...viewsDaily.map((d) => d.count));
+  const totalWeekViews = viewsDaily.reduce((s, d) => s + d.count, 0);
 
   const planLabel =
     effectivePlan === "PREMIUM"
@@ -214,13 +287,12 @@ export default function ProfilePage() {
   const planExpiringSoon =
     !!planExpiresAt && planDaysLeft !== null && planDaysLeft <= 7 && planDaysLeft > 0;
 
-  const handleRequestVerification = async () => {
-    try {
-      await requestVerification();
-      refetchVerification();
-    } catch {
-      alert("Error al solicitar la verificación.");
-    }
+  // v2 Fase 10c: en lugar de disparar la mutation directamente, abrimos el
+  // modal que permite adjuntar docs (mejor evidencia para el admin, menos
+  // rechazos por falta de info). El submit dentro del modal llama a la
+  // misma requestVerification con docs opcionales.
+  const handleRequestVerification = () => {
+    setVerificationModalOpen(true);
   };
 
   const openViewer = (url?: string | null) => {
@@ -231,6 +303,12 @@ export default function ProfilePage() {
   const onShare = async () => {
     if (!p?.id) return;
     await share({ type: "profile", id: p.id, name: p.name ?? "este perfil" });
+  };
+
+  const handleLogout = () => {
+    if (typeof window !== "undefined") localStorage.clear();
+    logout();
+    router.push("/");
   };
 
   return (
@@ -291,7 +369,6 @@ export default function ProfilePage() {
                 <BadgeCheck
                   size={20}
                   className="fill-primary text-white"
-                  strokeWidth={0}
                 />
               )}
               {planLabel && (
@@ -528,49 +605,74 @@ export default function ProfilePage() {
               )}
             </div>
 
-            {hasFullStats && viewsDaily.length > 0 && (
+            {hasFullStats && (
               <div className="mt-6">
                 <p className="text-xs font-semibold text-muted">
                   Visitas últimos 7 días
                 </p>
-                {/* Grid with explicit rows: bars area (flexible) + label area
-                    (fixed). Fixes the previous flex-column-with-percent-height
-                    bug where the inner bar had no reference height. */}
-                <div
-                  className="mt-3 grid gap-2"
-                  style={{
-                    gridTemplateColumns: `repeat(${viewsDaily.length}, minmax(0, 1fr))`,
-                    gridTemplateRows: "6rem auto",
-                  }}
-                >
-                  {viewsDaily.map((d) => (
-                    <div
-                      key={`${d.date}-bar`}
-                      className="flex items-end"
-                      style={{ gridRow: 1 }}
-                    >
-                      <div
-                        className="w-full rounded-t bg-primary/70 transition hover:bg-primary"
-                        style={{
-                          height: `${Math.max(4, (d.count / maxDaily) * 100)}%`,
-                        }}
-                        title={`${d.count} visita${d.count === 1 ? "" : "s"}`}
-                      />
-                    </div>
-                  ))}
-                  {viewsDaily.map((d) => (
-                    <span
-                      key={`${d.date}-lbl`}
-                      className="mt-1 text-center text-[10px] text-muted"
-                      style={{ gridRow: 2 }}
-                    >
-                      {new Date(d.date + "T00:00:00").toLocaleDateString(
-                        "es-ES",
-                        { weekday: "narrow" },
-                      )}
-                    </span>
-                  ))}
-                </div>
+                {viewsDaily.length === 0 ? (
+                  <p className="mt-2 rounded-lg bg-surface-container/60 px-3 py-6 text-center text-[11px] text-on-surface-variant">
+                    Cargando datos de visitas…
+                  </p>
+                ) : totalWeekViews === 0 ? (
+                  <p className="mt-2 rounded-lg bg-surface-container/60 px-3 py-6 text-center text-[11px] text-on-surface-variant">
+                    Aún no hay visitas registradas esta semana. Publica un
+                    anuncio nuevo o compártelo para atraer tráfico.
+                  </p>
+                ) : (
+                  // Grid con filas explícitas: barras (6rem) + labels (auto).
+                  // Cada bar-container es flex items-end y h-full — sin h-full
+                  // el porcentaje del hijo referenciaba el track pero algunos
+                  // browsers colapsaban el layout a 0 cuando el bar era el
+                  // único hijo del cell.
+                  <div
+                    className="mt-3 grid gap-2"
+                    style={{
+                      gridTemplateColumns: `repeat(${viewsDaily.length}, minmax(0, 1fr))`,
+                      gridTemplateRows: "6rem auto",
+                    }}
+                  >
+                    {viewsDaily.map((d) => {
+                      const pct = Math.round((d.count / maxDaily) * 100);
+                      return (
+                        <div
+                          key={`${d.date}-bar`}
+                          className="flex h-full items-end"
+                          style={{ gridRow: 1 }}
+                        >
+                          <div
+                            className={`w-full rounded-t transition ${
+                              d.count > 0
+                                ? "bg-primary/70 hover:bg-primary"
+                                : "bg-surface-container"
+                            }`}
+                            style={{
+                              // Days con 0 visitas: barra bajita para
+                              // "tick" visual; con visitas: proporcional al
+                              // máximo semanal.
+                              height: d.count > 0
+                                ? `${Math.max(6, pct)}%`
+                                : "4px",
+                            }}
+                            title={`${d.count} visita${d.count === 1 ? "" : "s"}`}
+                          />
+                        </div>
+                      );
+                    })}
+                    {viewsDaily.map((d) => (
+                      <span
+                        key={`${d.date}-lbl`}
+                        className="mt-1 text-center text-[10px] text-muted"
+                        style={{ gridRow: 2 }}
+                      >
+                        {new Date(d.date + "T00:00:00").toLocaleDateString(
+                          "es-ES",
+                          { weekday: "narrow" },
+                        )}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
@@ -643,8 +745,9 @@ export default function ProfilePage() {
 
       {/* Tab content */}
       <div className="mt-4">
-        {tab === "listings" &&
-          (!prodLoading && products.length === 0 ? (
+        {tab === "listings" && (
+          <>
+            {!prodLoading && products.length === 0 ? (
             <div className="px-6 py-16 text-center">
               <p className="text-sm text-muted">
                 No tienes anuncios publicados.{" "}
@@ -655,13 +758,70 @@ export default function ProfilePage() {
               </p>
             </div>
           ) : (
-            <ProductGrid
-              products={products}
-              loading={prodLoading}
-              ownerActions
-              pageSize={16}
-            />
-          ))}
+            <>
+              {/* v2 Fase 10b — panel plan-gateado para gestionar pins de
+                  perfil y pool de auto-bump. Renderiza null para Free/Basic. */}
+              {profile?.id && (
+                <PlanFeaturesPanel
+                  userId={profile.id}
+                  effectivePlan={effectivePlan}
+                  products={products}
+                />
+              )}
+              <ProductGrid
+                products={products}
+                loading={prodLoading}
+                ownerActions
+                pageSize={16}
+                pinnedIds={pinnedIds}
+                autoBumpedIds={autoBumpedIds}
+                onTogglePin={canPin ? togglePin : undefined}
+                onToggleAutoBump={canAutoBump ? toggleAutoBump : undefined}
+              />
+            </>
+          )}
+
+            <section className="mx-4 mb-10 mt-10 rounded-xl border border-outline-variant/30 bg-surface-lowest p-4 sm:mx-6">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h2 className="text-sm font-bold text-on-surface">Cuenta</h2>
+                  <p className="mt-0.5 text-xs text-muted">
+                    Gestiona tu sesión en este dispositivo.
+                  </p>
+                </div>
+                {!logoutConfirm ? (
+                  <button
+                    type="button"
+                    onClick={() => setLogoutConfirm(true)}
+                    className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-danger/30 bg-danger/5 px-4 py-2 text-sm font-bold text-danger transition hover:bg-danger/10"
+                  >
+                    <LogOut size={15} /> Cerrar sesión
+                  </button>
+                ) : (
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                    <span className="text-sm font-semibold text-on-surface">
+                      ¿Cerrar sesión?
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-danger px-4 py-2 text-sm font-bold text-white transition hover:opacity-90"
+                    >
+                      <LogOut size={14} /> Sí, cerrar sesión
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setLogoutConfirm(false)}
+                      className="rounded-lg bg-surface-container px-4 py-2 text-sm font-semibold text-on-surface transition hover:bg-surface-high"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                )}
+              </div>
+            </section>
+          </>
+        )}
 
         {tab === "reviews" && (
           <ReviewsList
@@ -681,6 +841,12 @@ export default function ProfilePage() {
       <SettingsModal
         open={settingsOpen}
         onClose={() => setSettingsOpen(false)}
+      />
+
+      <VerificationRequestModal
+        open={verificationModalOpen}
+        onClose={() => setVerificationModalOpen(false)}
+        onSubmitted={() => refetchVerification()}
       />
 
       {viewerUri && (

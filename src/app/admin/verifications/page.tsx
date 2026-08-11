@@ -29,6 +29,8 @@ interface VerificationRequest {
   id: string;
   userId: string;
   status: "pending" | "approved" | "rejected";
+  /** v2: URLs de documentos que el usuario subió con la solicitud. */
+  docs?: string[];
   rejectedReason?: string | null;
   reviewedAt?: string | null;
   createdAt: string;
@@ -338,6 +340,48 @@ export default function AdminVerifications() {
                 </span>
               )}
             </div>
+
+            {/* v2 Fase 5.2/8: docs subidos por el usuario. Se muestran como
+                thumbnails clicables — abre en pestaña nueva para inspección. */}
+            {selected.docs && selected.docs.length > 0 && (
+              <div className="rounded-xl border border-outline-variant/30 p-4">
+                <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">
+                  Documentos ({selected.docs.length})
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {selected.docs.map((url, i) => {
+                    const resolved = resolveImage(url);
+                    const isImage = /\.(png|jpe?g|webp|gif)$/i.test(url);
+                    return (
+                      <a
+                        key={i}
+                        href={resolved}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="group relative grid h-24 w-24 place-items-center overflow-hidden rounded-lg border border-outline-variant/40 bg-surface-container transition hover:border-primary"
+                        title={`Doc ${i + 1}: ${url}`}
+                      >
+                        {isImage ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={resolved}
+                            alt={`Doc ${i + 1}`}
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <span className="text-[10px] font-bold uppercase text-muted">
+                            Archivo
+                          </span>
+                        )}
+                        <span className="absolute inset-x-0 bottom-0 bg-black/60 px-1 py-0.5 text-[10px] font-semibold text-white opacity-0 transition group-hover:opacity-100">
+                          Ver
+                        </span>
+                      </a>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {selected.status === "rejected" && selected.rejectedReason && (
               <div className="rounded-xl border border-red-200 bg-red-50 p-3 dark:border-red-500/20 dark:bg-red-500/10">

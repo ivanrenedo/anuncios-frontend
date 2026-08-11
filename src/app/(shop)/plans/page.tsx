@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import {
   ArrowLeft,
   ShoppingBag,
+  ShieldCheck,
   Star,
   Crown,
   Check,
@@ -13,89 +15,109 @@ import {
   MessageCircle,
 } from "lucide-react";
 import { useProfile } from "@/hooks/useProfile";
+import { useBusinessContact } from "@/hooks/useBusinessContact";
+
+type PlanKey = "FREE" | "BASIC" | "STAR" | "PREMIUM";
 
 interface PlanDef {
-  key: "FREE" | "STAR" | "PREMIUM";
+  key: PlanKey;
   label: string;
-  price: string;
-  period: string;
+  /** Monthly price in XAF, 0 for FREE. */
+  monthlyPrice: number;
   accent: string;
   Icon: React.ElementType;
   description: string;
   features: { label: string; included: boolean }[];
 }
 
+// v2 catalogue — kept in one place so the copy stays aligned with the briefing.
+// Numeric prices are formatted at render time; annual view divides by 12 and
+// applies the −25 % yearly discount from PLAN_LIMITS/DISCOUNT_TIERS.
 const PLANS: PlanDef[] = [
   {
     key: "FREE",
     label: "Gratis",
-    price: "0",
-    period: "",
+    monthlyPrice: 0,
     accent: "#6B7280",
     Icon: ShoppingBag,
-    description: "Para empezar a vender de forma sencilla",
+    description: "Para empezar a vender sin coste",
     features: [
       { label: "Hasta 5 anuncios activos", included: true },
       { label: "Hasta 4 fotos por anuncio", included: true },
-      { label: "Perfil publico basico", included: true },
       { label: "Contacto directo con compradores", included: true },
-      { label: "Insignia de vendedor", included: false },
-      { label: "Aparicion en escaparate de portada", included: false },
-      { label: "Auto-bump de anuncios", included: false },
-      { label: "Estadisticas de visitas", included: false },
+      { label: "Seguir vendedores + notificaciones", included: true },
+      { label: "Insignia de plan", included: false },
+      { label: "Destacados incluidos", included: false },
+      { label: "Auto-bump", included: false },
+      { label: "Estadísticas", included: false },
+    ],
+  },
+  {
+    key: "BASIC",
+    label: "Básico",
+    monthlyPrice: 3_000,
+    accent: "#0EA5E9",
+    Icon: ShieldCheck,
+    description: "Sube el límite y consigue tu primer destacado",
+    features: [
+      { label: "Hasta 15 anuncios activos", included: true },
+      { label: "Hasta 4 fotos por anuncio", included: true },
+      { label: "1 destacado incluido al mes", included: true },
+      { label: "Vistas + favoritos", included: true },
+      { label: "Insignia de plan", included: false },
+      { label: "Anuncios fijados en perfil", included: false },
+      { label: "Auto-bump", included: false },
+      { label: "Chip \"Rebajado hoy\"", included: false },
     ],
   },
   {
     key: "STAR",
     label: "Estrella",
-    price: "3.000",
-    period: "XAF/mes",
+    monthlyPrice: 12_000,
     accent: "#F5A623",
     Icon: Star,
     description: "Para vendedores activos que quieren destacar",
     features: [
-      { label: "Hasta 25 anuncios activos", included: true },
+      { label: "Hasta 30 anuncios activos", included: true },
       { label: "Hasta 6 fotos por anuncio", included: true },
-      { label: "Perfil publico completo", included: true },
-      { label: "Contacto directo con compradores", included: true },
-      { label: "Insignia Estrella", included: true },
-      { label: "Aparicion ocasional en portada", included: true },
-      { label: "1 auto-bump por semana", included: true },
-      { label: "Estadisticas basicas", included: true },
+      { label: "3 destacados incluidos al mes", included: true },
+      { label: "4 anuncios fijados en tu perfil", included: true },
+      { label: "Auto-bump semanal (pool 3)", included: true },
+      { label: "Chip \"Rebajado hoy\" 48 h", included: true },
+      { label: "WhatsApp personalizado + contactos", included: true },
+      { label: "Insignia ⭐", included: true },
     ],
   },
   {
     key: "PREMIUM",
     label: "Premium",
-    price: "10.000",
-    period: "XAF/mes",
+    monthlyPrice: 35_000,
     accent: "#7C3AED",
     Icon: Crown,
-    description: "Para negocios y vendedores profesionales",
+    description: "Para negocios verificados con tienda propia",
     features: [
-      { label: "Anuncios ilimitados", included: true },
-      { label: "Hasta 10 fotos por anuncio", included: true },
-      { label: "Perfil de negocio", included: true },
-      { label: "Contacto directo con compradores", included: true },
-      { label: "Insignia Premium", included: true },
-      { label: "Prioridad en escaparate de portada", included: true },
-      { label: "Auto-bump diario", included: true },
-      { label: "Estadisticas completas", included: true },
+      { label: "Hasta 100 anuncios activos", included: true },
+      { label: "8 destacados incluidos al mes (−50 % extra)", included: true },
+      { label: "10 anuncios fijados en tu perfil", included: true },
+      { label: "Auto-bump diario (pool 5)", included: true },
+      { label: "Carrusel \"Tiendas Premium\" en portada", included: true },
+      { label: "Sin anuncios de terceros en tu ficha", included: true },
+      { label: "Verificación 👑 + analytics completo", included: true },
     ],
   },
 ];
 
-const WHATSAPP_NUMBER = "240222626418";
+const YEARLY_DISCOUNT = 0.25;
 
-function contactWhatsApp(plan: string) {
-  const msg = encodeURIComponent(
-    `Hola, me gustaria contratar el plan ${plan} en Bomelh. Como puedo activarlo?`,
-  );
-  window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`, "_blank");
+function fmtXaf(n: number): string {
+  return new Intl.NumberFormat("es-ES").format(n);
 }
 
 export default function PlansPage() {
   const { profile } = useProfile();
+  const [cycle, setCycle] = useState<"MONTHLY" | "YEARLY">("MONTHLY");
+  const { phone: contactNumber } = useBusinessContact();
+
   const currentPlan = profile?.plan ?? "FREE";
   const effectivePlan = profile?.effectivePlan ?? currentPlan;
   const expiresAt = profile?.planExpiresAt
@@ -109,8 +131,16 @@ export default function PlansPage() {
       year: "numeric",
     });
 
+    function contactWhatsApp(plan: string, cycle: "MONTHLY" | "YEARLY") {
+      const cycleLabel = cycle === "YEARLY" ? "anual" : "mensual";
+      const msg = encodeURIComponent(
+        `Hola, quiero contratar el plan ${plan} (${cycleLabel}) en Bomelh. ¿Cómo lo activo?`,
+      );
+      window.open(`https://wa.me/${contactNumber}?text=${msg}`, "_blank");
+    }
+
   return (
-    <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6">
+    <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
       {/* Header */}
       <div className="mb-6 flex items-center gap-3">
         <Link
@@ -125,7 +155,7 @@ export default function PlansPage() {
       </div>
 
       {/* Hero */}
-      <div className="mb-8 text-center">
+      <div className="mb-6 text-center">
         <div className="mx-auto mb-3 grid h-14 w-14 place-items-center rounded-2xl bg-primary/10">
           <Zap size={28} strokeWidth={1.5} className="text-primary" />
         </div>
@@ -133,27 +163,88 @@ export default function PlansPage() {
           Haz crecer tu negocio
         </h2>
         <p className="mx-auto mt-2 max-w-md text-sm text-on-surface-variant">
-          Elige el plan que mejor se adapte a ti. Publicar es gratis — los
-          planes te dan mas visibilidad, mas anuncios y herramientas para vender
-          mas rapido.
+          Elige el plan que mejor se adapte. Publicar es gratis — los planes te
+          dan más anuncios, más visibilidad y ventajas exclusivas.
         </p>
       </div>
 
-      {/* Plan cards */}
-      <div className="grid gap-5 sm:grid-cols-3">
+      {/* Monthly / yearly toggle. The −25 % yearly discount comes from
+          DISCOUNT_TIERS on the backend; the same fraction is shown here so the
+          card price and the WhatsApp conversation match. */}
+      <div className="mb-8 flex justify-center">
+        <div
+          role="tablist"
+          aria-label="Ciclo de facturación"
+          className="inline-flex rounded-full bg-surface-container p-1"
+        >
+          <button
+            type="button"
+            role="tab"
+            aria-selected={cycle === "MONTHLY"}
+            onClick={() => setCycle("MONTHLY")}
+            className={`rounded-full px-4 py-1.5 text-sm font-bold transition ${
+              cycle === "MONTHLY"
+                ? "bg-primary text-on-primary shadow"
+                : "text-on-surface-variant hover:text-on-surface"
+            }`}
+          >
+            Mensual
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={cycle === "YEARLY"}
+            onClick={() => setCycle("YEARLY")}
+            className={`rounded-full px-4 py-1.5 text-sm font-bold transition ${
+              cycle === "YEARLY"
+                ? "bg-primary text-on-primary shadow"
+                : "text-on-surface-variant hover:text-on-surface"
+            }`}
+          >
+            Anual
+            <span
+              className={`ml-1.5 rounded-full px-1.5 py-0.5 text-[10px] font-extrabold ${
+                cycle === "YEARLY"
+                  ? "bg-white/25 text-white"
+                  : "bg-emerald-500/15 text-emerald-500"
+              }`}
+            >
+              −25 %
+            </span>
+          </button>
+        </div>
+      </div>
+
+      {/* 4-column grid. Collapses to 2×2 on tablet and single column on mobile. */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {PLANS.map((plan) => {
           const isCurrent = currentPlan === plan.key;
           const isExpired =
             isCurrent && plan.key !== "FREE" && effectivePlan === "FREE";
           const isUpgrade =
             !isCurrent &&
-            ((effectivePlan === "FREE" && plan.key !== "FREE") ||
-              (effectivePlan === "STAR" && plan.key === "PREMIUM"));
+            plan.key !== "FREE" &&
+            planRank(plan.key) > planRank(effectivePlan);
+
+          const yearlyPrice = Math.round(
+            plan.monthlyPrice * 12 * (1 - YEARLY_DISCOUNT),
+          );
+          const displayedPrice =
+            cycle === "YEARLY" ? yearlyPrice : plan.monthlyPrice;
+          const priceSuffix =
+            plan.monthlyPrice === 0
+              ? ""
+              : cycle === "YEARLY"
+                ? "XAF/año"
+                : "XAF/mes";
+          const highlight = plan.key === "PREMIUM";
 
           return (
             <div
               key={plan.key}
-              className="relative flex flex-col rounded-2xl border bg-surface-lowest p-5 shadow-soft"
+              className={`relative flex flex-col rounded-2xl border bg-surface-lowest p-5 shadow-soft ${
+                highlight ? "ring-2 ring-primary/25" : ""
+              }`}
               style={{
                 borderColor: isCurrent
                   ? plan.accent + "66"
@@ -161,7 +252,12 @@ export default function PlansPage() {
                 borderWidth: isCurrent ? 2 : 1,
               }}
             >
-              {/* Current badge */}
+              {highlight && (
+                <span className="absolute -top-3 right-4 rounded-full bg-primary px-3 py-1 text-[11px] font-extrabold uppercase tracking-wide text-on-primary shadow">
+                  Recomendado
+                </span>
+              )}
+
               {isCurrent && (
                 <span
                   className="mb-3 inline-block self-start rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wide"
@@ -175,66 +271,74 @@ export default function PlansPage() {
                 </span>
               )}
 
-              {/* Icon + name */}
               <div className="mb-4 flex items-center gap-3">
                 <div
-                  className="grid h-12 w-12 place-items-center rounded-xl"
+                  className="grid h-11 w-11 place-items-center rounded-xl"
                   style={{ backgroundColor: plan.accent + "18" }}
                 >
                   <plan.Icon
-                    size={22}
+                    size={20}
                     strokeWidth={1.8}
                     style={{ color: plan.accent }}
-                    fill={plan.key !== "FREE" ? plan.accent : "transparent"}
+                    fill={plan.key === "PREMIUM" ? plan.accent : "transparent"}
                   />
                 </div>
                 <div>
-                  <p className="text-lg font-extrabold">{plan.label}</p>
-                  <p className="text-xs text-on-surface-variant">
+                  <p className="text-lg font-extrabold leading-tight">
+                    {plan.label}
+                  </p>
+                  <p className="text-[11px] leading-snug text-on-surface-variant">
                     {plan.description}
                   </p>
                 </div>
               </div>
 
-              {/* Price */}
-              <div className="mb-4 flex items-baseline gap-1.5">
-                {plan.key === "FREE" ? (
+              <div className="mb-4">
+                {plan.monthlyPrice === 0 ? (
                   <span className="text-2xl font-extrabold">Gratis</span>
                 ) : (
-                  <>
+                  <div className="flex items-baseline gap-1.5">
                     <span className="text-2xl font-extrabold">
-                      {plan.price}
+                      {fmtXaf(displayedPrice)}
                     </span>
-                    <span className="text-sm text-on-surface-variant">
-                      {plan.period}
+                    <span className="text-xs text-on-surface-variant">
+                      {priceSuffix}
                     </span>
-                  </>
+                  </div>
+                )}
+                {plan.monthlyPrice > 0 && cycle === "YEARLY" && (
+                  <p className="mt-1 text-[11px] text-on-surface-variant">
+                    Equivale a{" "}
+                    <strong>
+                      {fmtXaf(Math.round(yearlyPrice / 12))} XAF/mes
+                    </strong>
+                    .
+                  </p>
                 )}
               </div>
 
-              {/* Features */}
-              <ul className="mb-5 flex-1 space-y-2.5">
+              <ul className="mb-5 flex-1 space-y-2">
                 {plan.features.map((f) => (
-                  <li key={f.label} className="flex items-center gap-2.5">
+                  <li key={f.label} className="flex items-start gap-2">
                     {f.included ? (
-                      <span className="grid h-5 w-5 place-items-center rounded-full bg-emerald-500/15">
+                      <span className="mt-0.5 grid h-4 w-4 shrink-0 place-items-center rounded-full bg-emerald-500/15">
                         <Check
-                          size={12}
+                          size={10}
                           strokeWidth={2.5}
                           className="text-emerald-500"
                         />
                       </span>
                     ) : (
-                      <span className="grid h-5 w-5 place-items-center rounded-full bg-outline-variant/20">
+                      <span className="mt-0.5 grid h-4 w-4 shrink-0 place-items-center rounded-full bg-outline-variant/20">
                         <X
-                          size={12}
+                          size={10}
                           strokeWidth={2}
                           className="text-outline-variant"
                         />
                       </span>
                     )}
                     <span
-                      className={`text-sm ${
+                      className={`text-xs leading-snug ${
                         f.included
                           ? "text-on-surface"
                           : "text-on-surface-variant/60"
@@ -246,33 +350,21 @@ export default function PlansPage() {
                 ))}
               </ul>
 
-              {/* CTA */}
-              {isUpgrade && (
+              {(isUpgrade || isExpired) && (
                 <button
-                  onClick={() => contactWhatsApp(plan.label)}
+                  onClick={() => contactWhatsApp(plan.label, cycle)}
                   className="flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold text-white transition hover:opacity-90"
                   style={{ backgroundColor: plan.accent }}
                 >
                   <MessageCircle size={16} strokeWidth={2} />
-                  Contratar por WhatsApp
-                </button>
-              )}
-
-              {isExpired && (
-                <button
-                  onClick={() => contactWhatsApp(plan.label)}
-                  className="flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold text-white transition hover:opacity-90"
-                  style={{ backgroundColor: plan.accent }}
-                >
-                  <MessageCircle size={16} strokeWidth={2} />
-                  Renovar por WhatsApp
+                  {isExpired ? "Renovar por WhatsApp" : "Contratar por WhatsApp"}
                 </button>
               )}
 
               {isCurrent && plan.key !== "FREE" && (
-                <p className="mt-2 text-center text-xs font-semibold text-on-surface-variant">
+                <p className="mt-1 text-center text-[11px] font-semibold text-on-surface-variant">
                   {isExpired && expiresAt
-                    ? `Expiro el ${fmtDate(expiresAt)} — renovalo para recuperar tus ventajas`
+                    ? `Expiró el ${fmtDate(expiresAt)}`
                     : expiresAt
                       ? `Activo hasta el ${fmtDate(expiresAt)}`
                       : "Plan activo"}
@@ -285,12 +377,12 @@ export default function PlansPage() {
 
       {/* How it works */}
       <div className="mt-8 rounded-2xl bg-surface-container p-5">
-        <h3 className="mb-4 text-base font-bold">Como funciona?</h3>
+        <h3 className="mb-4 text-base font-bold">¿Cómo funciona?</h3>
         <div className="space-y-3">
           {[
-            'Elige tu plan y pulsa "Contratar por WhatsApp"',
-            "Realiza el pago por transferencia bancaria o pago movil",
-            "Envianos el justificante y activamos tu plan en minutos",
+            "Elige tu plan y pulsa \"Contratar por WhatsApp\"",
+            "Realiza el pago por transferencia bancaria o pago móvil",
+            "Envíanos el justificante y activamos tu plan en minutos",
           ].map((text, i) => (
             <div key={i} className="flex items-center gap-3">
               <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-primary/15 text-xs font-bold text-primary">
@@ -302,7 +394,8 @@ export default function PlansPage() {
         </div>
       </div>
 
-      {/* Highlight single ad */}
+      {/* Individual boost purchase — still available to any plan. Copy reflects
+          the three v2 durations from BOOST_PRICES. */}
       <div className="mt-5 rounded-2xl border border-primary/20 bg-primary/5 p-5">
         <div className="flex items-start gap-3">
           <ArrowUpCircle
@@ -312,20 +405,20 @@ export default function PlansPage() {
           />
           <div>
             <p className="text-sm font-bold text-on-surface">
-              Destacar un anuncio
+              Destacar un anuncio suelto
             </p>
             <p className="mt-1 text-[13px] leading-relaxed text-on-surface-variant">
-              No necesitas un plan? Destaca un anuncio individual por 1.000 XAF
-              durante 7 dias. Aparecera en las primeras posiciones de su
-              categoria.
+              ¿No quieres un plan todavía? Destaca un anuncio individual: 1.000
+              XAF por 3 días, 2.000 XAF por 7 días o 5.000 XAF por 30 días.
+              Aparecerá en las primeras posiciones de su categoría.
             </p>
             <button
               onClick={() => {
                 const msg = encodeURIComponent(
-                  "Hola, quiero destacar un anuncio en Bomelh durante 7 dias (1.000 XAF). Como procedo?",
+                  "Hola, quiero destacar un anuncio en Bomelh. ¿Cómo procedo?",
                 );
                 window.open(
-                  `https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`,
+                  `https://wa.me/${contactNumber}?text=${msg}`,
                   "_blank",
                 );
               }}
@@ -339,4 +432,9 @@ export default function PlansPage() {
       </div>
     </div>
   );
+}
+
+/** Rank ladder used to decide when a plan is an upgrade vs a lateral move. */
+function planRank(plan: string): number {
+  return { FREE: 0, BASIC: 1, STAR: 2, PREMIUM: 3 }[plan] ?? 0;
 }

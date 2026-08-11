@@ -10,7 +10,6 @@ import {
   Plus,
   LogIn,
   User,
-  LayoutGrid,
 } from "lucide-react";
 import { useQuery } from "@apollo/client/react";
 import { useAuth } from "@/hooks/useAuth";

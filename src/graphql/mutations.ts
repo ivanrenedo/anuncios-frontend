@@ -186,6 +186,12 @@ export const BOOST_PRODUCT = gql`
   }
 `;
 
+export const BOOST_MY_PRODUCT = gql`
+  mutation BoostMyProduct($id: String!, $days: Int) {
+    boostMyProduct(id: $id, days: $days) { id boostedUntil bumpedAt }
+  }
+`;
+
 export const ADMIN_SET_PRODUCT_STATUS = gql`
   mutation AdminSetProductStatus($id: String!, $status: String!, $reason: String) {
     adminSetProductStatus(id: $id, status: $status, reason: $reason) { id status }
@@ -473,10 +479,11 @@ export const DELETE_PLAN_CHANGES = gql`
 // ─── Verifications ───────────────────────────────────────────────────────────
 
 export const REQUEST_VERIFICATION = gql`
-  mutation RequestVerification {
-    requestVerification {
+  mutation RequestVerification($input: RequestVerificationInput) {
+    requestVerification(input: $input) {
       id
       status
+      docs
       createdAt
     }
   }
@@ -508,5 +515,58 @@ export const REJECT_VERIFICATION = gql`
 export const DELETE_VERIFICATION_REQUESTS = gql`
   mutation DeleteVerificationRequests($ids: [String!]!) {
     deleteVerificationRequests(ids: $ids)
+  }
+`;
+
+// ─── Plans v2 — pinned products, autobump slots, admin activation ────────────
+
+export const SET_PINNED_PRODUCTS = gql`
+  mutation SetPinnedProducts($productIds: [String!]!) {
+    setPinnedProducts(productIds: $productIds) {
+      id
+      title
+      price
+      discount
+      condition
+      city
+      status
+      images { id url sortOrder type thumbnailUrl }
+      priceReducedUntil
+    }
+  }
+`;
+
+export const SET_AUTO_BUMP_SLOTS = gql`
+  mutation SetAutoBumpSlots($productIds: [String!]!) {
+    setAutoBumpSlots(productIds: $productIds) {
+      id
+      productId
+      cadence
+      createdAt
+      product {
+        id
+        title
+        images { id url sortOrder type thumbnailUrl }
+      }
+    }
+  }
+`;
+
+export const ADMIN_ACTIVATE_PLAN = gql`
+  mutation AdminActivatePlan($input: ActivatePlanInput!) {
+    adminActivatePlan(input: $input) {
+      id
+      userId
+      plan
+      months
+      unitPrice
+      discountPct
+      totalPaid
+      activatedByAdminId
+      activatedAt
+      startsAt
+      endsAt
+      notes
+    }
   }
 `;

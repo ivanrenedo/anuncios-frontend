@@ -160,6 +160,14 @@ function ExploreInner() {
     if (debouncedPriceMin) input.priceMin = Number(debouncedPriceMin);
     if (debouncedPriceMax) input.priceMax = Number(debouncedPriceMax);
     if (activeConditions.length === 1) input.condition = activeConditions[0];
+    if (activeEngines.length > 0) input.engines = activeEngines;
+    if (activeTransmissions.length > 0)
+      input.transmissions = activeTransmissions;
+    if (operation) input.operation = operation;
+    if (filterOfferType) input.offerType = filterOfferType;
+    if (filterBedrooms > 0) input.bedroomsMin = filterBedrooms;
+    if (filterBathrooms > 0) input.bathroomsMin = filterBathrooms;
+    if (surfaceMin) input.surfaceMin = Number(surfaceMin);
     if (sortOrder === "price_asc" || sortOrder === "price_desc")
       input.sortBy = sortOrder;
     return input;
@@ -170,6 +178,13 @@ function ExploreInner() {
     debouncedPriceMin,
     debouncedPriceMax,
     activeConditions,
+    activeEngines,
+    activeTransmissions,
+    operation,
+    filterOfferType,
+    filterBedrooms,
+    filterBathrooms,
+    surfaceMin,
     sortOrder,
   ]);
 
@@ -333,7 +348,7 @@ function ExploreInner() {
       setActiveConditions([]);
     }
     if (nextCatSlug) setPendingCatSlug(nextCatSlug);
-    if (nextSectionId !== null) setActiveSectionId(nextSectionId || null);
+    setActiveSectionId(nextSectionId || null);
 
     if (!hasEntryParams || typeof window === "undefined") return;
     const url = new URL(window.location.href);
@@ -659,9 +674,6 @@ function ExploreInner() {
     activeCategory,
     catFilter,
     onOpenCategoryPicker: () => setCategoryPickerOpen(true),
-    query,
-    setQuery: updateQuery,
-    clearSearch,
     cityFilter,
     setCityFilter: updateCityFilter,
     priceMin,
@@ -731,7 +743,15 @@ function ExploreInner() {
       {/* Search + filter button (sólo el botón se oculta en lg+) */}
       <div className="mb-3 flex items-center gap-2">
         <div className="flex flex-col w-full">
-          <AdSenseSlot slot="" width={728} height={90} className="mx-auto mb-5"  />
+          {/* v2 Fase 12 — 320×50 mobile / 728×90 tablet+desktop */}
+          <AdSenseSlot
+            slot=""
+            width={728}
+            height={90}
+            mobileWidth={320}
+            mobileHeight={100}
+            className="mx-auto mb-5"
+          />
           <div className="flex row gap-2">
             <div className="relative flex-1">
               <Search

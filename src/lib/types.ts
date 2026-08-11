@@ -8,6 +8,9 @@ export interface Seller {
   plan?: string | null;
   phone?: string | null;
   showPhone?: boolean;
+  /** Set when a Premium business verification was approved. Backs the 👑
+   *  "verified since" label on Premium storefronts. */
+  businessVerifiedAt?: string | null;
 }
 
 export interface ProductImage {
@@ -80,6 +83,9 @@ export interface Product {
   impressions?: number;
   bumpedAt?: string;
   boostedUntil?: string | null;
+  /** Set by the backend when the seller drops the price. The frontend renders
+   *  the "Rebajado hoy" chip while `now < priceReducedUntil` (48h window,
+   *  gated to Star/Premium sellers by the card). */
   priceReducedUntil?: string | null;
   createdAt?: string;
   seller?: Seller;
@@ -128,8 +134,12 @@ export interface UserProfile {
   suspendedReason?: string | null;
   language?: string | null;
   plan?: string | null;
+  /** MONTHLY | YEARLY — how the current plan is billed (v2). */
+  planCycle?: string | null;
+  planStartedAt?: string | null;
   planExpiresAt?: string | null;
   effectivePlan?: string | null;
+  businessVerifiedAt?: string | null;
   maxActiveProducts?: number;
   maxImagesPerProduct?: number;
   notifMessages?: boolean;
