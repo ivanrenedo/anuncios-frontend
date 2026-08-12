@@ -21,6 +21,17 @@ export const ADMIN_TOKEN_KEY = "market_admin_token";
 /** Google OAuth Web Client ID (same one the mobile app uses). */
 export const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
 
+/** Canonical share URL for a seller's public profile, tagged so the backend
+ *  can attribute the visit to a QR-card scan. Uses `window.location.origin`
+ *  at runtime so previews/staging don't hard-code the production domain. */
+export function getQrProfileUrl(sellerId: string): string {
+  const origin =
+    typeof window !== "undefined" && window.location?.origin
+      ? window.location.origin
+      : SHARE_URL;
+  return `${origin}/user/${sellerId}?src=qr`;
+}
+
 /** Resolve a possibly-relative image URL coming from the backend. */
 export function resolveImage(url?: string | null): string {
   if (!url) return "";

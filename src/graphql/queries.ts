@@ -31,6 +31,8 @@ export const ME = gql`
       notifMarketing
       showEmail
       showPhone
+      qrShowPhone
+      qrShowEmail
       themePreference
       createdAt
       updatedAt
@@ -928,6 +930,19 @@ export const ADMIN_PLAN_STATS = gql`
         activations
         revenue
       }
+    }
+  }
+`;
+
+// ─── Seller QR stats ──────────────────────────────────────────────────────────
+
+export const MY_SELLER_QR_STATS = gql`
+  query MySellerQrStats {
+    mySellerQrStats {
+      total
+      thisMonth
+      last30Days
+      lastScanAt
     }
   }
 `;
