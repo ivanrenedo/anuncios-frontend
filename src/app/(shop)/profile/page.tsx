@@ -60,6 +60,7 @@ import { resolveImage } from "@/lib/config";
 import { formatDate, formatNumber, timeAgo } from "@/lib/format";
 import ProductGrid from "@/components/ProductGrid";
 import PlanFeaturesPanel from "@/components/PlanFeaturesPanel";
+import QrShareCard from "@/components/QrShareCard";
 import VerificationRequestModal from "@/components/VerificationRequestModal";
 import Skeleton from "@/components/Skeleton";
 import ImageLightbox from "@/components/ImageLightbox";
@@ -766,6 +767,20 @@ export default function ProfilePage() {
                   userId={profile.id}
                   effectivePlan={effectivePlan}
                   products={products}
+                />
+              )}
+              {/* v2 Fase QR — tarjeta QR privada del vendedor. Solo Star y
+                  Premium activos: los planes inferiores no la ven ni pueden
+                  generarla. */}
+              {profile?.id && hasStatsAccess && (
+                <QrShareCard
+                  userId={profile.id}
+                  name={profile.name}
+                  phone={profile.phone}
+                  email={profile.email}
+                  effectivePlan={effectivePlan}
+                  qrShowPhone={!!profile.qrShowPhone}
+                  qrShowEmail={!!profile.qrShowEmail}
                 />
               )}
               <ProductGrid

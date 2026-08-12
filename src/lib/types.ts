@@ -147,6 +147,8 @@ export interface UserProfile {
   notifMarketing?: boolean;
   showEmail?: boolean;
   showPhone?: boolean;
+  qrShowPhone?: boolean;
+  qrShowEmail?: boolean;
   themePreference?: string | null;
   createdAt?: string;
   updatedAt?: string;

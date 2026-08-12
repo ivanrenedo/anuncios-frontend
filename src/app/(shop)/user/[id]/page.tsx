@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
-import { useQuery } from "@apollo/client/react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useMutation, useQuery } from "@apollo/client/react";
+import { TRACK_SELLER_QR_SCAN } from "@/graphql/mutations";
 import {
   BadgeCheck,
   MapPin,
@@ -59,6 +60,7 @@ export default function PublicUserProfile() {
   const params = useParams();
   const id = (params?.id as string) ?? "";
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user: me, isAuthenticated } = useAuth();
   const isOwn = !!me?.id && me.id === id;
 
@@ -132,6 +134,20 @@ export default function PublicUserProfile() {
           : `Hola, quiero contactar con el vendedor "${user?.name ?? ""}" en Bomelh.`,
       )}`
     : "";
+
+  // QR-scan tracking. `?src=qr` on the seller profile URL means the visit came
+  // from a scanned QR card — fire-and-forget once per mount so refresh/back-nav
+  // in the same tab doesn't double-count. Backend also dedupes 30 min by
+  // visitor + rejects scans for sellers who aren't STAR/PREMIUM active.
+  const [trackQrScan] = useMutation(TRACK_SELLER_QR_SCAN);
+  const qrTrackedRef = useRef(false);
+  useEffect(() => {
+    if (!id) return;
+    if (qrTrackedRef.current) return;
+    if (searchParams?.get("src") !== "qr") return;
+    qrTrackedRef.current = true;
+    trackQrScan({ variables: { sellerId: id, source: "qr" } }).catch(() => {});
+  }, [id, searchParams, trackQrScan]);
 
   // Freshness on tab focus — follow-back, new reviews, new listings all show
   // up without a manual refresh.

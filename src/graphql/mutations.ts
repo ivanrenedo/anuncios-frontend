@@ -99,7 +99,7 @@ export const UPDATE_USER = gql`
     updateUser(input: $input) {
       id name email phone avatarUrl coverUrl bio location
       language notifMessages notifOffers notifMarketing
-      showEmail showPhone themePreference
+      showEmail showPhone qrShowPhone qrShowEmail themePreference
       verified updatedAt
     }
   }
@@ -568,5 +568,13 @@ export const ADMIN_ACTIVATE_PLAN = gql`
       endsAt
       notes
     }
+  }
+`;
+
+// ─── Seller QR ────────────────────────────────────────────────────────────────
+
+export const TRACK_SELLER_QR_SCAN = gql`
+  mutation TrackSellerQrScan($sellerId: String!, $source: String) {
+    trackSellerQrScan(sellerId: $sellerId, source: $source)
   }
 `;
