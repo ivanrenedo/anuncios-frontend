@@ -62,7 +62,7 @@ const KIND_META: Record<
   },
   servicios: {
     label: "Servicios",
-    subtitle: "Ofrece tu trabajo o profesionalidad o busca servicios",
+    subtitle: "Ofrece tu trabajo, profesionalidad o busca servicios",
     Icon: Wrench,
     color: "#8b5cf6",
   },

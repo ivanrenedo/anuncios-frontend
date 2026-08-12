@@ -401,6 +401,21 @@ export default function PublicUserProfile() {
             )}
             {!isOwn && (
               <>
+                <button
+                  onClick={onToggleFollow}
+                  className={`flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-bold transition ${
+                    followingLocal
+                      ? "bg-surface-container text-on-surface hover:bg-surface-high"
+                      : "bg-primary text-on-primary hover:bg-primary/90"
+                  }`}
+                >
+                  {followingLocal ? (
+                    <UserCheck size={16} />
+                  ) : (
+                    <UserPlus size={16} />
+                  )}
+                  {followingLocal ? "Siguiendo" : "Seguir"}
+                </button>
                 {/* v2 Fase 12 — WhatsApp: acción primaria para contactar al
                     vendedor / a su tienda. Verde emerald para diferenciar
                     visualmente de "Seguir" (primary) y "Denunciar" (danger). */}
@@ -420,21 +435,6 @@ export default function PublicUserProfile() {
                     WhatsApp
                   </a>
                 )}
-                <button
-                  onClick={onToggleFollow}
-                  className={`flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-bold transition ${
-                    followingLocal
-                      ? "bg-surface-container text-on-surface hover:bg-surface-high"
-                      : "bg-primary text-on-primary hover:bg-primary/90"
-                  }`}
-                >
-                  {followingLocal ? (
-                    <UserCheck size={16} />
-                  ) : (
-                    <UserPlus size={16} />
-                  )}
-                  {followingLocal ? "Siguiendo" : "Seguir"}
-                </button>
                 <button
                   onClick={onReport}
                   className="flex items-center gap-1.5 rounded-lg bg-danger-soft px-4 py-2 text-sm font-bold text-danger transition hover:opacity-80"
