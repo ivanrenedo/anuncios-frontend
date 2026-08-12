@@ -144,6 +144,8 @@ export const client = new ApolloClient({
           following: { merge: false },
           mySavedSearches: { merge: false },
           myAutoBumpSlots: { merge: false },
+          pinnedProducts: { merge: false },
+          homeCarouselPremium: { merge: false },
           categoryTree: { merge: false },
         },
       },
