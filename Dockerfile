@@ -34,6 +34,8 @@ COPY --from=build /app/.next/standalone ./
 COPY --from=build /app/.next/static ./.next/static
 COPY --from=build /app/public ./public
 
+RUN mkdir -p .next/cache && chown -R node:node .next/cache
+
 USER node
 
 EXPOSE 3000
