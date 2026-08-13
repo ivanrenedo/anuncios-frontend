@@ -136,7 +136,7 @@ export default function AdSenseSlot({
       <ins
         ref={insDesktopRef}
         className={`adsbygoogle ${hasMobileVariant ? "hidden sm:block" : ""} ${className}`}
-        style={{ width, height }}
+        style={{ display: "block", width, height }}
         data-ad-client={ADSENSE_CLIENT}
         data-ad-slot={slot}
         data-ad-format={format}
