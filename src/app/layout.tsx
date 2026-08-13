@@ -3,6 +3,8 @@ import Script from "next/script";
 import "./globals.css";
 import Providers from "@/components/Providers";
 
+const ADSENSE_CLIENT = process.env.NEXT_PUBLIC_ADSENSE_CLIENT || "";
+
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SHARE_URL || "https://bomelh.com"),
   title: "Bomelh - Comprar y vender en Guinea Ecuatorial",
@@ -25,6 +27,9 @@ export const metadata: Metadata = {
     locale: "es_GQ",
     type: "website",
   },
+  ...(ADSENSE_CLIENT
+    ? { other: { "google-adsense-account": ADSENSE_CLIENT } }
+    : {}),
 };
 
 export const viewport: Viewport = {
@@ -85,9 +90,15 @@ export default function RootLayout({
           strategy="beforeInteractive"
           dangerouslySetInnerHTML={{ __html: consentDefaultsScript }}
         />
-        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2621121538375000"
-        crossOrigin="anonymous"></script>
-        <meta name="google-adsense-account" content="ca-pub-2621121538375000"></meta>
+        {ADSENSE_CLIENT && (
+          <Script
+            id="adsense-loader"
+            strategy="beforeInteractive"
+            async
+            crossOrigin="anonymous"
+            src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT}`}
+          />
+        )}
         <Providers>{children}</Providers>
       </body>
     </html>
