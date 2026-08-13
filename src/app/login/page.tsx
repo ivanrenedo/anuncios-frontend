@@ -80,8 +80,15 @@ export default function LoginPage() {
         </div>
 
         <p className="mt-5 text-center text-xs leading-5 text-muted">
-          Al continuar, aceptas nuestros Términos de servicio y Política de
-          privacidad.
+          Al continuar, aceptas nuestros{" "}
+          <Link href="/terms" className="font-semibold text-primary underline-offset-2 hover:underline">
+            Términos de servicio
+          </Link>{" "}
+          y{" "}
+          <Link href="/privacy" className="font-semibold text-primary underline-offset-2 hover:underline">
+            Política de privacidad
+          </Link>
+          .
         </p>
       </div>
     </div>
