@@ -2,18 +2,24 @@
 
 import { useEffect, useRef } from "react";
 import { Megaphone } from "lucide-react";
-import { useHasConsent } from "@/hooks/useCookieConsent";
 
 /**
- * Slot de Google AdSense que respeta el consentimiento del usuario.
+ * Slot de Google AdSense.
  *
- * - Sin consentimiento de publicidad → renderiza un placeholder neutro
- *   (mismas dimensiones para no causar Cumulative Layout Shift al
- *   cambiar de estado).
- * - Con consentimiento y `client` + `slot` configurados → inyecta la
- *   etiqueta `<ins class="adsbygoogle">` y llama a `adsbygoogle.push({})`.
- * - El script de AdSense NO se carga en el HTML por defecto; se carga
- *   dinámicamente aquí sólo si hace falta y el usuario ha consentido.
+ * El script `adsbygoogle.js` se carga UNA vez en `<head>` desde
+ * `app/layout.tsx` (via `NEXT_PUBLIC_ADSENSE_CLIENT`). La gestión de
+ * personalización se delega a Google Consent Mode v2 (también inicializado
+ * en el layout):
+ *   - Sin consent → Google sirve anuncios NO personalizados (NPA).
+ *   - Con consent → anuncios personalizados normales.
+ * Esto es lo recomendado por Google para maximizar aprobación del sitio y
+ * fill-rate mientras se mantiene el cumplimiento GDPR.
+ *
+ * Este componente sólo se encarga de:
+ *   - Renderizar `<ins class="adsbygoogle">` con `data-ad-client`/`slot`.
+ *   - Llamar `adsbygoogle.push({})` para pedir un impresión.
+ *   - Colapsar el slot en vendedores PREMIUM (beneficio del plan).
+ *   - Placeholder cuando falta la env var (dev local).
  *
  * v2 Fase 12 — soporte responsive por dispositivo:
  *   - Si se pasa `mobileWidth`/`mobileHeight`, el slot renderiza a esas
@@ -22,10 +28,6 @@ import { useHasConsent } from "@/hooks/useCookieConsent";
  *   - Implementación: 2 elementos hermanos con visibility gate (Tailwind
  *     `hidden sm:*`) — AdSense no sirve anuncios en elementos con
  *     `display: none`, así que no hay doble billing.
- *
- * Variables de entorno esperadas:
- *  - `NEXT_PUBLIC_ADSENSE_CLIENT`  (obligatoria; formato `ca-pub-XXXXXX`)
- *  - Slot id se pasa por prop (`slot`) para cada emplazamiento.
  */
 
 interface Props {
@@ -61,20 +63,6 @@ interface Props {
 }
 
 const ADSENSE_CLIENT = process.env.NEXT_PUBLIC_ADSENSE_CLIENT || "";
-const SCRIPT_URL = "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js";
-let scriptLoaded = false;
-
-function loadAdSenseScript() {
-  if (scriptLoaded) return;
-  if (typeof window === "undefined") return;
-  if (!ADSENSE_CLIENT) return;
-  scriptLoaded = true;
-  const s = document.createElement("script");
-  s.async = true;
-  s.crossOrigin = "anonymous";
-  s.src = `${SCRIPT_URL}?client=${encodeURIComponent(ADSENSE_CLIENT)}`;
-  document.head.appendChild(s);
-}
 
 export default function AdSenseSlot({
   slot,
@@ -87,19 +75,16 @@ export default function AdSenseSlot({
   className = "",
   sellerPlan = null,
 }: Props) {
-  const canShowAds = useHasConsent("advertising");
   const insDesktopRef = useRef<HTMLModElement | null>(null);
   const insMobileRef = useRef<HTMLModElement | null>(null);
   const hasMobileVariant =
     typeof mobileWidth === "number" && typeof mobileHeight === "number";
 
-  // Effect antes de returns condicionales (Rules of Hooks). El push se hace
-  // por cada <ins> renderizado; AdSense ignora el hermano `display: none`.
+  // Un push por cada <ins> renderizado; AdSense ignora los que estén con
+  // `display: none` (variante mobile/desktop oculta por Tailwind).
   useEffect(() => {
-    if (!canShowAds) return;
     if (!ADSENSE_CLIENT) return;
     if (sellerPlan === "PREMIUM") return;
-    loadAdSenseScript();
     try {
       // @ts-expect-error - adsbygoogle inyectado por el script externo
       (window.adsbygoogle = window.adsbygoogle || []).push({});
@@ -108,16 +93,15 @@ export default function AdSenseSlot({
         (window.adsbygoogle = window.adsbygoogle || []).push({});
       }
     } catch {}
-  }, [canShowAds, slot, sellerPlan, hasMobileVariant]);
+  }, [slot, sellerPlan, hasMobileVariant]);
 
   // Premium plan opts the seller's pages out of third-party ads entirely.
   if (sellerPlan === "PREMIUM") {
     return null;
   }
 
-  // Placeholder cuando no hay consentimiento — mantiene reserva de espacio
-  // (evita CLS) sin cargar cookies de terceros.
-  if (!canShowAds || !ADSENSE_CLIENT) {
+  // Placeholder sólo cuando falta la env var (dev local sin AdSense).
+  if (!ADSENSE_CLIENT) {
     return (
       <>
         {hasMobileVariant && (
