@@ -74,13 +74,13 @@ export default function PlanFeaturesPanel({
             <button
               type="button"
               onClick={() => setReorderOpen(true)}
-              className="inline-flex items-center gap-1 rounded-full bg-surface-lowest px-2.5 py-0.5 text-[11px] font-bold text-primary transition hover:bg-surface-container"
+              className="inline-flex items-center gap-1 rounded-full bg-purple-600 px-2.5 py-0.5 text-[12px] font-bold text-white transition hover:bg-surface-container"
             >
-              <ArrowUpDown size={11} />
+              <ArrowUpDown size={16} />
               Reordenar
             </button>
           )}
-          <Pin size={14} className="text-primary" />
+          <Pin size={14} className="text-purple-600" />
           <span>
             Anuncios fijados{" "}
             <strong>

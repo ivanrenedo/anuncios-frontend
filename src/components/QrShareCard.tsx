@@ -26,18 +26,19 @@ interface Props {
   effectivePlan: string;
   qrShowPhone: boolean;
   qrShowEmail: boolean;
+  compact?: boolean;
 }
 
 const PLAN_META: Record<string, { label: string; icon: ReactNode; classes: string }> = {
   STAR: {
     label: "Star",
     icon: <Star size={12} className="fill-current" strokeWidth={0} />,
-    classes: "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400",
+    classes: "text-white bg-amber-500",
   },
   PREMIUM: {
     label: "Premium",
     icon: <Crown size={12} />,
-    classes: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
+    classes: "text-white bg-purple-600",
   },
 };
 
@@ -60,6 +61,7 @@ export default function QrShareCard({
   effectivePlan,
   qrShowPhone,
   qrShowEmail,
+  compact = false,
 }: Props) {
   const url = useMemo(() => getQrProfileUrl(userId), [userId]);
   const qrCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -130,7 +132,7 @@ export default function QrShareCard({
       ctx.strokeRect(2, 2, W - 4, H - 4);
 
       // "Bomelh." wordmark.
-      ctx.fillStyle = "#0f172a";
+      ctx.fillStyle = "#13c1ac";
       ctx.font = "700 56px system-ui, -apple-system, Segoe UI, sans-serif";
       ctx.textAlign = "center";
       ctx.fillText("Bomelh.", W / 2, 110);
@@ -142,8 +144,8 @@ export default function QrShareCard({
 
       // Plan pill (text only — kept simple, matches the pill look).
       if (planMeta) {
-        ctx.fillStyle = "#6b7280";
-        ctx.font = "600 22px system-ui, -apple-system, Segoe UI, sans-serif";
+        ctx.fillStyle = "#111827";
+        ctx.font = "600 26px system-ui, -apple-system, Segoe UI, sans-serif";
         ctx.fillText(planMeta.label.toUpperCase(), W / 2, 220);
       }
 
@@ -166,11 +168,6 @@ export default function QrShareCard({
         y += 40;
       }
 
-      // Public URL as small print at the bottom.
-      ctx.font = "500 20px system-ui, -apple-system, Segoe UI, sans-serif";
-      ctx.fillStyle = "#6b7280";
-      ctx.fillText(url.replace(/^https?:\/\//, ""), W / 2, H - 60);
-
       const dataUrl = canvas.toDataURL("image/png");
       const a = document.createElement("a");
       a.href = dataUrl;
@@ -182,12 +179,18 @@ export default function QrShareCard({
   };
 
   return (
-    <section className="mx-4 my-6 rounded-2xl border border-outline-variant/40 bg-surface-lowest p-4 sm:mx-6 sm:p-6">
+    <section
+      className={
+        compact
+          ? "rounded-2xl bg-surface-lowest p-4 sm:p-6"
+          : "mx-4 my-6 rounded-2xl border border-outline-variant/40 bg-surface-lowest p-4 sm:mx-6 sm:p-6"
+      }
+    >
       <div className="flex flex-col gap-6 md:flex-row md:items-start">
         {/* Preview card */}
         <div className="flex flex-1 justify-center">
-          <div className="flex w-full max-w-xs flex-col items-center gap-3 rounded-2xl border border-outline-variant/30 bg-white px-6 py-6 text-slate-900 shadow-sm">
-            <p className="text-2xl font-extrabold tracking-tight">Bomelh.</p>
+          <div className="flex w-full max-w-xs flex-col items-center rounded-2xl border border-outline-variant/30 bg-white px-6 py-6 text-slate-900 shadow-sm">
+            <p className="text-2xl font-extrabold tracking-tight text-primary">Bomelh.</p>
             <p className="text-lg font-bold">{name}</p>
             {planMeta && (
               <span
@@ -202,7 +205,13 @@ export default function QrShareCard({
                 value={url}
                 size={200}
                 includeMargin
-                level="M"
+                level="H"
+                 imageSettings={{
+                  src: "/icon-512.png", // Must be 'src', not 'url' or 'logo'
+                  height: 40,
+                  width: 40,
+                  excavate: true, // Cuts out the QR modules behind the logo so it renders properly
+                }}
                 ref={qrCanvasRef as any}
               />
             </div>
@@ -216,9 +225,6 @@ export default function QrShareCard({
                 <Mail size={13} /> {email}
               </p>
             )}
-            <p className="mt-1 break-all text-center text-[11px] font-medium text-slate-500">
-              {url.replace(/^https?:\/\//, "")}
-            </p>
           </div>
         </div>
 

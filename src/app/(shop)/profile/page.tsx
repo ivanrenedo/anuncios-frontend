@@ -29,6 +29,7 @@ import {
   Share2,
   Plus,
   LogOut,
+  QrCode,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
@@ -51,6 +52,7 @@ import {
   MY_VIEWS_DAILY,
   PINNED_PRODUCTS,
   MY_AUTO_BUMP_SLOTS,
+  MY_SELLER_QR_STATS,
 } from "@/graphql/queries";
 import {
   SET_PINNED_PRODUCTS,
@@ -84,6 +86,7 @@ export default function ProfilePage() {
   const [tab, setTab] = useState<Tab>("listings");
   const [viewerUri, setViewerUri] = useState<string | null>(null);
   const [verificationModalOpen, setVerificationModalOpen] = useState(false);
+  const [qrModalOpen, setQrModalOpen] = useState(false);
   const { share } = useShare();
 
   const {
@@ -122,6 +125,14 @@ export default function ProfilePage() {
   const hasFullStats = effectivePlan === "PREMIUM";
   const canPin = effectivePlan === "STAR" || effectivePlan === "PREMIUM";
   const canAutoBump = canPin;
+  const {
+    data: qrStatsData,
+    refetch: refetchQrStats,
+  } = useQuery(MY_SELLER_QR_STATS, {
+    skip: !hasStatsAccess || !isAuthenticated,
+    fetchPolicy: "cache-and-network",
+  }) as { data: any; refetch: () => Promise<any> };
+  const monthlyQrScans = Number(qrStatsData?.mySellerQrStats?.thisMonth) || 0;
 
   // v2 Fase 11.3 — fetch de pinned + slots del owner para poder mostrar el
   // estado por card y togglear. Skip cuando el plan no lo permite (evita
@@ -197,6 +208,7 @@ export default function ProfilePage() {
     refetchFollowersCount,
     refetchFollowingCount,
     refetchVerification,
+    refetchQrStats,
   ]);
 
   if (!authLoading && !isAuthenticated) {
@@ -259,7 +271,7 @@ export default function ProfilePage() {
     effectivePlan === "PREMIUM"
       ? "Premium"
       : effectivePlan === "STAR"
-        ? "Star"
+        ? "Estrella"
         : null;
 
   // Verification cooldown: if the user was rejected, they must wait N days
@@ -376,8 +388,8 @@ export default function ProfilePage() {
                 <span
                   className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-bold ${
                     planLabel === "Premium"
-                      ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
-                      : "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400"
+                      ? "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400"
+                      : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
                   }`}
                 >
                   {planLabel === "Premium" ? (
@@ -579,7 +591,11 @@ export default function ProfilePage() {
                 Estadísticas
               </h3>
             </div>
-            <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-4">
+            <div
+              className={`mt-3 grid grid-cols-1 gap-3 ${
+                hasFullStats ? "sm:grid-cols-3 lg:grid-cols-5" : "sm:grid-cols-3"
+              }`}
+            >
               <MiniStat
                 icon={<Eye size={14} />}
                 label="Visitas"
@@ -589,6 +605,11 @@ export default function ProfilePage() {
                 icon={<Heart size={14} />}
                 label="Favoritos"
                 value={formatNumber(totalFavorites)}
+              />
+              <MiniStat
+                icon={<QrCode size={14} />}
+                label="Visitas QR"
+                value={formatNumber(monthlyQrScans)}
               />
               {hasFullStats && (
                 <>
@@ -605,6 +626,26 @@ export default function ProfilePage() {
                 </>
               )}
             </div>
+            {profile?.id && hasStatsAccess && (
+              <button
+                type="button"
+                onClick={() => setQrModalOpen(true)}
+                className="mt-4 flex w-full items-center gap-3 rounded-xl border border-outline-variant/30 bg-surface-container px-4 py-3 text-left transition hover:border-primary/40 hover:bg-surface-high"
+              >
+                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
+                  <QrCode size={18} />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-bold text-on-surface">
+                    Mi tarjeta QR
+                  </span>
+                  <span className="block text-xs text-muted">
+                    Comparte tu perfil con clientes
+                  </span>
+                </span>
+                <span className="text-sm font-bold text-primary">Ver QR</span>
+              </button>
+            )}
 
             {hasFullStats && (
               <div className="mt-6">
@@ -769,20 +810,6 @@ export default function ProfilePage() {
                   products={products}
                 />
               )}
-              {/* v2 Fase QR — tarjeta QR privada del vendedor. Solo Star y
-                  Premium activos: los planes inferiores no la ven ni pueden
-                  generarla. */}
-              {profile?.id && hasStatsAccess && (
-                <QrShareCard
-                  userId={profile.id}
-                  name={profile.name}
-                  phone={profile.phone}
-                  email={profile.email}
-                  effectivePlan={effectivePlan}
-                  qrShowPhone={!!profile.qrShowPhone}
-                  qrShowEmail={!!profile.qrShowEmail}
-                />
-              )}
               <ProductGrid
                 products={products}
                 loading={prodLoading}
@@ -863,6 +890,39 @@ export default function ProfilePage() {
         onClose={() => setVerificationModalOpen(false)}
         onSubmitted={() => refetchVerification()}
       />
+
+      {qrModalOpen && profile?.id && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/45 p-0 sm:items-center sm:p-4">
+          <div
+            className="absolute inset-0"
+            onClick={() => setQrModalOpen(false)}
+            aria-hidden="true"
+          />
+          <div className="relative max-h-[92vh] w-full overflow-y-auto rounded-t-2xl border border-outline-variant/30 bg-surface shadow-xl sm:max-w-3xl sm:rounded-2xl">
+            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-outline-variant/30 bg-surface px-4 py-3">
+              <h3 className="text-sm font-bold text-on-surface">Mi tarjeta QR</h3>
+              <button
+                type="button"
+                onClick={() => setQrModalOpen(false)}
+                className="grid h-9 w-9 place-items-center rounded-full bg-surface-container text-on-surface transition hover:bg-surface-high"
+                aria-label="Cerrar tarjeta QR"
+              >
+                <XCircle size={18} />
+              </button>
+            </div>
+            <QrShareCard
+              userId={profile.id}
+              name={profile.name}
+              phone={profile.phone}
+              email={profile.email}
+              effectivePlan={effectivePlan}
+              qrShowPhone={!!profile.qrShowPhone}
+              qrShowEmail={!!profile.qrShowEmail}
+              compact
+            />
+          </div>
+        </div>
+      )}
 
       {viewerUri && (
         <ImageLightbox
