@@ -259,9 +259,11 @@ export default function ProductDetailPage({
           para pegar el <ins class="adsbygoogle"> cuando exista slot. */}
       {/* v2 Fase 12 — 320×50 mobile / 728×90 tablet+desktop */}
       <AdSenseSlot
-        slot=""
+        slot="9280849367"
         width={728}
         height={90}
+        mobileWidth={320}
+        mobileHeight={100}
         className="mb-5 mx-auto"
       />
 
@@ -273,7 +275,7 @@ export default function ProductDetailPage({
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[300px_minmax(0,1fr)_300px] xl:gap-8">
         {/* Left sticky ad rail — Half Page 300×600, sólo se muestra en xl+ */}
         <aside className="hidden xl:block">
-          <AdSenseSlot slot="" width={300} height={600} className="sticky top-24"  />
+          <AdSenseSlot slot="4548035461" width={300} height={600} className="sticky top-24"  />
         </aside>
 
         {/* Center content — gallery + info apilados. `min-w-0` es clave: sin
@@ -790,7 +792,7 @@ export default function ProductDetailPage({
 
         {/* Right sticky ad rail — Half Page 300×600, sólo se muestra en xl+ */}
         <aside className="hidden xl:block">
-          <AdSenseSlot slot="" width={300} height={600} className="sticky top-24"  />
+          <AdSenseSlot slot="4548035461" width={300} height={600} className="sticky top-24"  />
         </aside>
       </div>
       {/* /grid */}
