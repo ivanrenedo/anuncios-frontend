@@ -223,17 +223,13 @@ export default function ProductDetailPage({
   const isBoosted =
     product.boostedUntil && new Date(product.boostedUntil) > new Date();
   const isOwner = user?.id && sellerId && user.id === sellerId;
+  const sellerPlan = product.seller?.plan;
   const sellerPhone = product.seller?.phone;
   const canShowPhone = product.seller?.showPhone && sellerPhone;
 
-  // v2 Fase 6a.7 — WhatsApp personalizado por plan del vendedor.
-  //  · Star/Premium con teléfono: la conversación va directamente al vendedor.
-  //  · Cualquier otro caso: la conversación va al número del negocio (la
-  //    plataforma es intermediaria para Free/Basic).
-  const sellerPlan = product.seller?.plan;
-  const canUsePersonalWa =
-    (sellerPlan === "STAR" || sellerPlan === "PREMIUM") && !!sellerPhone;
-  const waNumber = (canUsePersonalWa ? sellerPhone! : contactNumber)?.replace(
+  // WhatsApp va al vendedor cuando tenga teléfono; si no, cae al contacto del
+  // negocio como intermediario.
+  const waNumber = (sellerPhone || contactNumber)?.replace(
     /[^0-9]/g,
     "",
   );
