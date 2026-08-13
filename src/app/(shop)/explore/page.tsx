@@ -745,7 +745,7 @@ function ExploreInner() {
         <div className="flex flex-col w-full">
           {/* v2 Fase 12 — 320×50 mobile / 728×90 tablet+desktop */}
           <AdSenseSlot
-            slot=""
+            slot="9280849367"
             width={728}
             height={90}
             mobileWidth={320}

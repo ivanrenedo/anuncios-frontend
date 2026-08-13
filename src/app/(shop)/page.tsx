@@ -290,7 +290,7 @@ export default function HomePage() {
                   <>
                   {/* v2 Fase 12 — 320×50 en mobile (<sm), 728×90 en ≥sm (tablet+desktop) */}
                   <AdSenseSlot
-                    slot=""
+                    slot="9280849367"
                     width={728}
                     height={90}
                     mobileWidth={320}
