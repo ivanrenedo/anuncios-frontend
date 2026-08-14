@@ -4,9 +4,8 @@ import { useState } from "react";
 import { useQuery, useMutation } from "@apollo/client/react";
 import {
   GripVertical, Plus, Pencil, Trash2, Eye, EyeOff,
-  Flame, Clock, Tag, Star, TrendingUp, Heart, Image,
-  LayoutGrid, Sparkles, BarChart3, Play, ArrowUp, ArrowDown, ImagePlus,
-  Crown,
+  TrendingUp,
+  Sparkles, BarChart3, Play, ArrowUp, ArrowDown, ImagePlus,
 } from "lucide-react";
 import {
   GET_ADMIN_HOME_SECTIONS,
@@ -28,6 +27,12 @@ import Spinner from "@/components/Spinner";
 import { getErrorMessage } from "@/lib/errors";
 import { formatDate } from "@/lib/format";
 import { resolveImage, UPLOAD_URL } from "@/lib/config";
+import {
+  DEFAULT_HOME_SECTION_ICON,
+  HOME_SECTION_ICON_OPTIONS,
+  getHomeSectionIcon,
+  getHomeSectionIconTone,
+} from "@/lib/homeSectionIcons";
 
 interface HomeSection {
   id: string;
@@ -94,13 +99,6 @@ interface SectionStats {
   ctr: number;
 }
 
-const ICON_MAP: Record<string, any> = {
-  flame: Flame, clock: Clock, tag: Tag, star: Star,
-  "trending-up": TrendingUp, heart: Heart, image: Image,
-  "layout-grid": LayoutGrid,crown: Crown
-};
-const ICON_OPTIONS = Object.keys(ICON_MAP);
-
 const TYPE_OPTIONS = [
   { value: "product_rail", label: "Rail de productos" },
   { value: "product_grid", label: "Grid de productos" },
@@ -162,8 +160,7 @@ function newSlide(): BannerSlide {
 }
 
 function getIcon(name?: string | null) {
-  const Icon = ICON_MAP[name ?? ""] ?? Star;
-  return Icon;
+  return getHomeSectionIcon(name) ?? DEFAULT_HOME_SECTION_ICON;
 }
 
 export default function AdminHomePage() {
@@ -442,7 +439,9 @@ export default function AdminHomePage() {
                 }`}
               >
                 <GripVertical size={18} className="shrink-0 cursor-grab text-muted" />
-                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
+                <span
+                  className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg ${getHomeSectionIconTone(s.icon)}`}
+                >
                   <Icon size={18} />
                 </span>
                 <div className="min-w-0 flex-1">
@@ -584,7 +583,7 @@ export default function AdminHomePage() {
                 onChange={(e) => setForm({ ...form, icon: e.target.value })}
                 className="h-10 w-full rounded-xl border border-outline-variant/50 bg-surface-lowest px-3 text-sm outline-none"
               >
-                {ICON_OPTIONS.map((name) => (
+                {HOME_SECTION_ICON_OPTIONS.map((name) => (
                   <option key={name} value={name}>{name}</option>
                 ))}
               </select>
