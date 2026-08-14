@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Megaphone } from "lucide-react";
 
 /**
@@ -12,38 +12,32 @@ import { Megaphone } from "lucide-react";
  * en el layout):
  *   - Sin consent → Google sirve anuncios NO personalizados (NPA).
  *   - Con consent → anuncios personalizados normales.
- * Esto es lo recomendado por Google para maximizar aprobación del sitio y
- * fill-rate mientras se mantiene el cumplimiento GDPR.
  *
- * Este componente sólo se encarga de:
- *   - Renderizar `<ins class="adsbygoogle">` con `data-ad-client`/`slot`.
- *   - Llamar `adsbygoogle.push({})` para pedir un impresión.
- *   - Colapsar el slot en vendedores PREMIUM (beneficio del plan).
- *   - Placeholder cuando falta la env var (dev local).
- *
- * v2 Fase 12 — soporte responsive por dispositivo:
- *   - Si se pasa `mobileWidth`/`mobileHeight`, el slot renderiza a esas
- *     dimensiones en <sm (mobile) y a `width`/`height` en ≥sm (tablet+desktop).
- *   - Standard IAB sizes: 320×50 para mobile banner, 728×90 para leaderboard.
- *   - Implementación: 2 elementos hermanos con visibility gate (Tailwind
- *     `hidden sm:*`) — AdSense no sirve anuncios en elementos con
- *     `display: none`, así que no hay doble billing.
+ * Modo responsive por dispositivo (v3):
+ *   - Cuando se pasan `mobileWidth`/`mobileHeight` (opcionalmente + `mobileSlot`),
+ *     el componente decide en cliente qué variante mostrar usando `matchMedia`.
+ *     Renderiza UN solo `<ins>` (el que toca) y hace UN solo `push({})`.
+ *   - Antes usábamos dos hermanos con visibility gate — pero eso hacía que
+ *     Google marcara el `<ins>` oculto como `unfilled`, contaminando métricas.
+ *   - Si Google recomienda un slot ID distinto por formato: pasa `mobileSlot`.
+ *     Si no, el mismo `slot` se reutiliza para ambos breakpoints.
  */
 
 interface Props {
-  /** Slot ID de AdSense (numérico como string). */
+  /** Slot ID de AdSense (numérico como string). Se usa en desktop/tablet y
+   *  como fallback en mobile si no se pasa `mobileSlot`. */
   slot: string;
   /** Ancho fijo (px) en desktop / tablet (breakpoint sm+). */
   width: number;
   /** Alto fijo (px) en desktop / tablet. Debe coincidir con el formato del slot. */
   height: number;
-  /**
-   * v2 Fase 12 — ancho para mobile (<sm, viewport <640px).
-   * Cuando ambos `mobileWidth` y `mobileHeight` se pasan, el componente
-   * renderiza el tamaño mobile en <sm y el tamaño desktop en ≥sm.
-   * Si se omite, se usa `width` en todos los breakpoints (comportamiento
-   * legacy pre-v2).
-   */
+  /** Slot ID distinto para el ad unit mobile (recomendado por Google:
+   *  un slot por formato para segmentar métricas y optimizar fill). Si no se
+   *  pasa, se reutiliza `slot`. */
+  mobileSlot?: string;
+  /** Ancho para mobile (<sm, viewport <640px). Junto con `mobileHeight`
+   *  activa el modo responsive. Si se omite, se usa `width` en todos los
+   *  breakpoints. */
   mobileWidth?: number;
   /** Alto para mobile (<sm). Ver `mobileWidth`. */
   mobileHeight?: number;
@@ -53,21 +47,22 @@ interface Props {
   responsive?: boolean;
   className?: string;
   /**
-   * v2 (Fase 6b.3). Plan del vendedor cuya página se está renderizando. Si es
-   * PREMIUM, el slot se colapsa completamente (no placeholder, no ad) — un
-   * beneficio del plan es "Sin anuncios de terceros en tu ficha/tienda".
-   * Para páginas que no son de un vendedor concreto (home, categorías,
-   * búsqueda), no se pasa y el slot renderiza normalmente.
+   * Plan del vendedor cuya página se está renderizando. Si es PREMIUM el
+   * slot se colapsa completamente (beneficio del plan).
    */
   sellerPlan?: string | null;
 }
 
 const ADSENSE_CLIENT = process.env.NEXT_PUBLIC_ADSENSE_CLIENT || "";
+const MOBILE_BREAKPOINT_QUERY = "(max-width: 639px)"; // Tailwind <sm
+
+type Variant = "mobile" | "desktop";
 
 export default function AdSenseSlot({
   slot,
   width,
   height,
+  mobileSlot,
   mobileWidth,
   mobileHeight,
   format = "auto",
@@ -75,74 +70,85 @@ export default function AdSenseSlot({
   className = "",
   sellerPlan = null,
 }: Props) {
-  const insDesktopRef = useRef<HTMLModElement | null>(null);
-  const insMobileRef = useRef<HTMLModElement | null>(null);
+  const insRef = useRef<HTMLModElement | null>(null);
   const hasMobileVariant =
     typeof mobileWidth === "number" && typeof mobileHeight === "number";
 
-  // Un push por cada <ins> renderizado; AdSense ignora los que estén con
-  // `display: none` (variante mobile/desktop oculta por Tailwind).
+  // `null` durante SSR + primer render para evitar hydration mismatch. Tras
+  // montar en cliente decidimos qué variante corresponde al viewport actual.
+  const [variant, setVariant] = useState<Variant | null>(null);
+
   useEffect(() => {
-    if (!ADSENSE_CLIENT) return;
+    if (!hasMobileVariant) {
+      setVariant("desktop");
+      return;
+    }
+    const mql = window.matchMedia(MOBILE_BREAKPOINT_QUERY);
+    setVariant(mql.matches ? "mobile" : "desktop");
+    // Si el usuario rota/redimensiona cruzando el breakpoint, el remount
+    // del <ins> hace que se pida un nuevo ad para el formato correcto.
+    const handler = (e: MediaQueryListEvent) =>
+      setVariant(e.matches ? "mobile" : "desktop");
+    mql.addEventListener("change", handler);
+    return () => mql.removeEventListener("change", handler);
+  }, [hasMobileVariant]);
+
+  // Un solo push por <ins> montado. Se re-ejecuta si cambia la variante
+  // (cross-breakpoint) porque React remonta el <ins> con nueva `key`.
+  useEffect(() => {
+    if (!ADSENSE_CLIENT || !slot || variant === null) return;
     if (sellerPlan === "PREMIUM") return;
     try {
       // @ts-expect-error - adsbygoogle inyectado por el script externo
       (window.adsbygoogle = window.adsbygoogle || []).push({});
-      if (hasMobileVariant) {
-        // @ts-expect-error - segundo push para el <ins> hermano
-        (window.adsbygoogle = window.adsbygoogle || []).push({});
-      }
     } catch {}
-  }, [slot, sellerPlan, hasMobileVariant]);
+  }, [variant, slot, mobileSlot, sellerPlan]);
 
-  // Premium plan opts the seller's pages out of third-party ads entirely.
   if (sellerPlan === "PREMIUM") {
     return null;
   }
 
-  // Placeholder sólo cuando falta la env var (dev local sin AdSense).
-  if (!ADSENSE_CLIENT) {
+  // Sin env var (dev local): placeholder que reserva el espacio del
+  // formato desktop (aprox correcto en la mayoría de layouts).
+  if (!ADSENSE_CLIENT || !slot) {
+    const phW = variant === "mobile" && hasMobileVariant ? mobileWidth! : width;
+    const phH = variant === "mobile" && hasMobileVariant ? mobileHeight! : height;
+    return <Placeholder width={phW} height={phH} className={className} />;
+  }
+
+  // SSR / pre-hydration: no renderizamos <ins> aún — evita que AdSense
+  // intente procesar un elemento con display:none y lo marque unfilled.
+  if (variant === null) {
+    // Reserva de espacio para evitar CLS. Usamos el tamaño desktop como
+    // default; la mayoría del tráfico entra pintado tras <200ms.
+    const phW = hasMobileVariant ? mobileWidth! : width;
+    const phH = hasMobileVariant ? mobileHeight! : height;
     return (
-      <>
-        {hasMobileVariant && (
-          <Placeholder
-            width={mobileWidth!}
-            height={mobileHeight!}
-            className={`sm:hidden ${className}`}
-          />
-        )}
-        <Placeholder
-          width={width}
-          height={height}
-          className={`${hasMobileVariant ? "hidden sm:flex" : ""} ${className}`}
-        />
-      </>
+      <div
+        className={className}
+        style={{ width: phW, height: phH, maxWidth: "100%" }}
+        aria-hidden="true"
+      />
     );
   }
 
+  const useMobile = variant === "mobile" && hasMobileVariant;
+  const activeSlot = useMobile ? mobileSlot || slot : slot;
+  const activeWidth = useMobile ? mobileWidth! : width;
+  const activeHeight = useMobile ? mobileHeight! : height;
+
   return (
-    <>
-      {hasMobileVariant && (
-        <ins
-          ref={insMobileRef}
-          className={`adsbygoogle block sm:hidden ${className}`}
-          style={{ width: mobileWidth, height: mobileHeight }}
-          data-ad-client={ADSENSE_CLIENT}
-          data-ad-slot={slot}
-          data-ad-format={format}
-          data-full-width-responsive={responsive ? "true" : "false"}
-        />
-      )}
-      <ins
-        ref={insDesktopRef}
-        className={`adsbygoogle hidden sm:block ${className}`}
-        style={{ width, height }}
-        data-ad-client={ADSENSE_CLIENT}
-        data-ad-slot={slot}
-        data-ad-format={format}
-        data-full-width-responsive={responsive ? "true" : "false"}
-      />
-    </>
+    <ins
+      // `key` fuerza remount al cambiar de breakpoint → nuevo push limpio.
+      key={variant}
+      ref={insRef}
+      className={`adsbygoogle block ${className}`}
+      style={{ width: activeWidth, height: activeHeight }}
+      data-ad-client={ADSENSE_CLIENT}
+      data-ad-slot={activeSlot}
+      data-ad-format={format}
+      data-full-width-responsive={responsive ? "true" : "false"}
+    />
   );
 }
 
