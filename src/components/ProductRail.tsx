@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import ProductCard, { ProductCardSkeleton } from "./ProductCard";
 import type { Product } from "@/lib/types";
@@ -30,6 +30,21 @@ export default function ProductRail({
   const trackRef = useRef<HTMLDivElement | null>(null);
   const pausedRef = useRef(false);
   const animRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // El backend puede devolver el mismo producto varias veces dentro de un
+  // rail (p. ej. cuando una sección "trending" y un boost admin coinciden).
+  // Dedupamos preservando el orden de aparición para no romper la key de
+  // React ni pintar cards duplicadas.
+  const uniqueProducts = useMemo(() => {
+    const seen = new Set<string>();
+    const out: Product[] = [];
+    for (const p of products) {
+      if (!p?.id || seen.has(p.id)) continue;
+      seen.add(p.id);
+      out.push(p);
+    }
+    return out;
+  }, [products]);
 
   // Estado de flechas: se actualizan tras cada scroll para ocultar el prev
   // en el inicio y el next en el final, en lugar de dejar flechas "muertas".
@@ -250,13 +265,13 @@ export default function ProductRail({
         onTouchStart={onPointerEnter}
         onTouchEnd={onPointerLeave}
       >
-        {loading && products.length === 0
+        {loading && uniqueProducts.length === 0
           ? Array.from({ length: 6 }).map((_, i) => (
               <div key={i} className="w-40 shrink-0 sm:w-48">
                 <ProductCardSkeleton />
               </div>
             ))
-          : products.map((p) => (
+          : uniqueProducts.map((p) => (
               <div
                 key={p.id}
                 className="group rail w-60 shrink-0 sm:w-72 animate-fade-in overflow-hidden rounded-xl border border-outline-variant/30 bg-surface-lowest transition hover:border-outline-variant/60 hover:shadow-card"

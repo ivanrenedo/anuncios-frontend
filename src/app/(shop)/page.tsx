@@ -291,10 +291,11 @@ export default function HomePage() {
                   {/* v2 Fase 12 — 320×50 en mobile (<sm), 728×90 en ≥sm (tablet+desktop) */}
                   <AdSenseSlot
                     slot="9280849367"
+                    mobileSlot="9107061724"
                     width={728}
                     height={90}
                     mobileWidth={320}
-                    mobileHeight={100}
+                    mobileHeight={50}
                     className="mx-auto mt-5"
                   />
                     <section className="px-4 pt-6 sm:px-6">

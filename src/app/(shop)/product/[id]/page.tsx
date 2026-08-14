@@ -260,6 +260,7 @@ export default function ProductDetailPage({
       {/* v2 Fase 12 — 320×50 mobile / 728×90 tablet+desktop */}
       <AdSenseSlot
         slot="9280849367"
+        mobileSlot="9107061724"
         width={728}
         height={90}
         mobileWidth={320}
