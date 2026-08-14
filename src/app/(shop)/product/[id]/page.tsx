@@ -223,7 +223,8 @@ export default function ProductDetailPage({
   const isBoosted =
     product.boostedUntil && new Date(product.boostedUntil) > new Date();
   const isOwner = user?.id && sellerId && user.id === sellerId;
-  const sellerPlan = product.seller?.plan;
+  const sellerPlan =
+    product.seller?.effectivePlan ?? product.seller?.plan ?? null;
   const sellerPhone = product.seller?.phone;
   const canShowPhone = product.seller?.showPhone && sellerPhone;
 
@@ -266,6 +267,7 @@ export default function ProductDetailPage({
         mobileWidth={320}
         mobileHeight={100}
         className="mb-5 mx-auto"
+        sellerPlan={sellerPlan}
       />
 
       {/* Layout Wallapop-style: contenido centrado con dos rails de anuncios
@@ -276,7 +278,7 @@ export default function ProductDetailPage({
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[300px_minmax(0,1fr)_300px] xl:gap-8">
         {/* Left sticky ad rail — Half Page 300×600, sólo se muestra en xl+ */}
         <aside className="hidden xl:block">
-          <AdSenseSlot slot="4548035461" width={300} height={600} className="sticky top-24"  />
+          <AdSenseSlot slot="4548035461" width={300} height={600} className="sticky top-24" sellerPlan={sellerPlan} />
         </aside>
 
         {/* Center content — gallery + info apilados. `min-w-0` es clave: sin
@@ -793,7 +795,7 @@ export default function ProductDetailPage({
 
         {/* Right sticky ad rail — Half Page 300×600, sólo se muestra en xl+ */}
         <aside className="hidden xl:block">
-          <AdSenseSlot slot="4548035461" width={300} height={600} className="sticky top-24"  />
+          <AdSenseSlot slot="4548035461" width={300} height={600} className="sticky top-24" sellerPlan={sellerPlan} />
         </aside>
       </div>
       {/* /grid */}

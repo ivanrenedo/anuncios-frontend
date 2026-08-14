@@ -6,6 +6,9 @@ export interface Seller {
   location?: string | null;
   bio?: string | null;
   plan?: string | null;
+  /** Backend-computed plan honoring `planExpiresAt` — use this over `plan`
+   *  for feature gating (ad-free perk, boost caps, etc.). */
+  effectivePlan?: string | null;
   phone?: string | null;
   showPhone?: boolean;
   /** Set when a Premium business verification was approved. Backs the 👑
