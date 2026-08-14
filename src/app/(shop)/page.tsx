@@ -32,6 +32,22 @@ import ProductGrid from "@/components/ProductGrid";
 import Skeleton from "@/components/Skeleton";
 import { useUnreadCount } from "@/hooks/useNotifications";
 import AdSenseSlot from "@/components/AdSenseSlot";
+import {
+  getHomeSectionIcon,
+  getHomeSectionIconTone,
+} from "@/lib/homeSectionIcons";
+
+function HomeSectionIcon({ name }: { name?: string | null }) {
+  const Icon = getHomeSectionIcon(name);
+  if (!Icon) return null;
+  return (
+    <span
+      className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg ${getHomeSectionIconTone(name)}`}
+    >
+      <Icon size={17} strokeWidth={2} />
+    </span>
+  );
+}
 
 /**
  * Wraps a single home section with impression + click tracking. Impression
@@ -71,6 +87,7 @@ function TrackedSection({
         <SectionHeader
           title={section.title}
           subtitle={section.subtitle ?? undefined}
+          icon={<HomeSectionIcon name={section.icon} />}
           href={seeAllHref}
           onClick={seeAllHref ? handleClick : undefined}
         />
@@ -89,6 +106,7 @@ function TrackedSection({
         <SectionHeader
           title={section.title}
           subtitle={section.subtitle ?? undefined}
+          icon={<HomeSectionIcon name={section.icon} />}
           href={seeAllHref}
           onClick={seeAllHref ? handleClick : undefined}
         />
