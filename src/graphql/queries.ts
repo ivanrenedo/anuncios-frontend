@@ -252,6 +252,7 @@ export const GET_PRODUCT = gql`
         location
         bio
         plan
+        effectivePlan
         phone
         showPhone
         businessVerifiedAt
