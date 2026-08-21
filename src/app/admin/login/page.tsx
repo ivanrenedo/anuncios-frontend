@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Lock } from "lucide-react";
-import { ADMIN_TOKEN_KEY } from "@/lib/config";
+import { client } from "@/lib/apollo";
+import { ADMIN_AUTH_EVENT, ADMIN_TOKEN_KEY } from "@/lib/config";
 import ThemeToggle from "@/components/layout/ThemeToggle";
 import BrandLogo from "@/components/layout/BrandLogo";
 import Spinner from "@/components/Spinner";
@@ -32,7 +33,9 @@ export default function AdminLoginPage() {
         return;
       }
       localStorage.setItem(ADMIN_TOKEN_KEY, data.token);
-      router.push("/admin");
+      window.dispatchEvent(new Event(ADMIN_AUTH_EVENT));
+      await client.clearStore().catch(() => {});
+      router.replace("/admin");
     } catch {
       setError("Error de conexión");
     } finally {

@@ -27,7 +27,8 @@ import {
   Wallet,
   ScrollText,
 } from "lucide-react";
-import { ADMIN_TOKEN_KEY, resolveImage } from "@/lib/config";
+import { client } from "@/lib/apollo";
+import { ADMIN_AUTH_EVENT, ADMIN_TOKEN_KEY, resolveImage } from "@/lib/config";
 import { ADMIN_ME } from "@/graphql/queries";
 import { useThemeStore } from "@/store/themeStore";
 import BrandLogo from "@/components/layout/BrandLogo";
@@ -134,7 +135,9 @@ export default function Sidebar() {
 
   const logout = () => {
     localStorage.removeItem(ADMIN_TOKEN_KEY);
-    router.push("/admin/login");
+    window.dispatchEvent(new Event(ADMIN_AUTH_EVENT));
+    client.clearStore().catch(() => {});
+    router.replace("/admin/login");
   };
 
   return (

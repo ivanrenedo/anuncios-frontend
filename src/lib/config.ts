@@ -18,6 +18,10 @@ export const TOKEN_KEY = "market_token";
 /** Admin session token — issued via the email + PIN route handler. */
 export const ADMIN_TOKEN_KEY = "market_admin_token";
 
+/** Same-tab signal used after admin login/logout because `storage` only fires
+ *  in other tabs. */
+export const ADMIN_AUTH_EVENT = "market_admin_auth_changed";
+
 /** Google OAuth Web Client ID (same one the mobile app uses). */
 export const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
 

@@ -6,7 +6,12 @@ import {
 } from "@apollo/client";
 import { setContext } from "@apollo/client/link/context";
 import { onError } from "@apollo/client/link/error";
-import { GRAPHQL_URL, TOKEN_KEY, ADMIN_TOKEN_KEY } from "./config";
+import {
+  ADMIN_AUTH_EVENT,
+  ADMIN_TOKEN_KEY,
+  GRAPHQL_URL,
+  TOKEN_KEY,
+} from "./config";
 
 const REFRESH_TOKEN_KEY = "market_refresh_token";
 
@@ -64,6 +69,15 @@ const errorLink = onError(({ graphQLErrors, operation, forward }: any) => {
       msgs.some((m: string) => m.includes("unauthorized") || m.includes("jwt expired")),
   );
   if (!unauthenticated) return;
+
+  const inAdmin =
+    typeof window !== "undefined" &&
+    window.location.pathname.startsWith("/admin");
+  if (inAdmin) {
+    localStorage.removeItem(ADMIN_TOKEN_KEY);
+    window.dispatchEvent(new Event(ADMIN_AUTH_EVENT));
+    return;
+  }
 
   const storedRefresh =
     typeof window !== "undefined"
