@@ -60,6 +60,7 @@ const EMPTY_FORM = {
   email: "",
   location: "",
   rolId: "",
+  pin: "",
   verified: false,
   permission: "DENIED",
   isBusiness: false,
@@ -98,7 +99,7 @@ export default function AdminUsers() {
   const [suspendUser, { loading: suspending }] = useMutation(SUSPEND_USER);
   const [unsuspendUser, { loading: unsuspending }] = useMutation(UNSUSPEND_USER);
   const router = useRouter();
-  const { can } = useAbilities();
+  const { can, isSuperAdmin } = useAbilities();
   const canCreate = can("create");
   const canUpdate = can("update");
   const canDelete = can("delete");
@@ -136,6 +137,7 @@ export default function AdminUsers() {
       email: u.email ?? "",
       location: u.location ?? "",
       rolId: u.rolId ?? "",
+      pin: "",
       verified: !!u.verified,
       permission: u.permission ?? "DENIED",
       isBusiness: !!u.isBusiness,
@@ -163,6 +165,9 @@ export default function AdminUsers() {
               verified: form.verified,
               permission: form.permission,
               isBusiness: form.isBusiness,
+              ...(isSuperAdmin && form.pin.trim()
+                ? { pin: form.pin.trim() }
+                : {}),
             },
           },
         });
@@ -565,7 +570,28 @@ export default function AdminUsers() {
               <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">
                 Acceso al panel
               </p>
-              <div className="divide-y divide-outline-variant/30 rounded-xl border border-outline-variant/30 px-4">
+              <div className="space-y-4 rounded-xl border border-outline-variant/30 p-4">
+                {isSuperAdmin && (
+                  <div>
+                    <Input
+                      label="Nuevo PIN admin"
+                      icon={<KeyRound size={16} />}
+                      value={form.pin}
+                      onChange={(v) =>
+                        setForm({
+                          ...form,
+                          pin: v.replace(/\D/g, "").slice(0, 12),
+                        })
+                      }
+                      placeholder="Dejar vacío para no cambiar"
+                    />
+                    <p className="mt-1 text-xs text-muted">
+                      Solo SUPER_ADMIN puede cambiar este PIN. Debe tener entre
+                      4 y 12 dígitos.
+                    </p>
+                  </div>
+                )}
+                <div className="divide-y divide-outline-variant/30">
                 <ToggleRow
                   label="Verificado"
                   description="Marca la cuenta como verificada"
@@ -586,6 +612,7 @@ export default function AdminUsers() {
                   checked={form.isBusiness}
                   onChange={(v) => setForm({ ...form, isBusiness: v })}
                 />
+                </div>
               </div>
             </div>
           )}
