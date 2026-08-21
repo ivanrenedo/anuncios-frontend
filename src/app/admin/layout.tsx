@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useQuery } from "@apollo/client/react";
 import Sidebar from "@/components/admin/Sidebar";
-import { ADMIN_TOKEN_KEY } from "@/lib/config";
+import { ADMIN_AUTH_EVENT, ADMIN_TOKEN_KEY } from "@/lib/config";
 import { ADMIN_ME } from "@/graphql/queries";
 import Spinner from "@/components/Spinner";
 
@@ -17,13 +17,27 @@ export default function AdminLayout({
   const router = useRouter();
   const isLogin = pathname === "/admin/login";
 
-  // Read the token after mount to avoid SSR/hydration mismatch.
+  // Read the token after mount to avoid SSR/hydration mismatch. This layout
+  // persists between /admin/login and /admin, so keep it synced explicitly.
   const [mounted, setMounted] = useState(false);
   const [token, setToken] = useState<string | null>(null);
   useEffect(() => {
+    const syncToken = () => setToken(localStorage.getItem(ADMIN_TOKEN_KEY));
+
     setMounted(true);
-    setToken(localStorage.getItem(ADMIN_TOKEN_KEY));
-  }, []);
+    syncToken();
+
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === ADMIN_TOKEN_KEY) syncToken();
+    };
+
+    window.addEventListener("storage", onStorage);
+    window.addEventListener(ADMIN_AUTH_EVENT, syncToken);
+    return () => {
+      window.removeEventListener("storage", onStorage);
+      window.removeEventListener(ADMIN_AUTH_EVENT, syncToken);
+    };
+  }, [pathname]);
 
   // Validate the session: the account must still have panel access (GRANTED).
   // This stops AdminGuard-protected pages from firing with a stale/insufficient
@@ -47,6 +61,7 @@ export default function AdminLayout({
     if (loading) return;
     if (!granted) {
       localStorage.removeItem(ADMIN_TOKEN_KEY);
+      window.dispatchEvent(new Event(ADMIN_AUTH_EVENT));
       router.replace("/admin/login");
     }
   }, [isLogin, mounted, token, loading, granted, router]);
