@@ -26,6 +26,7 @@ import {
   ChevronDown,
   Wallet,
   ScrollText,
+  Gift,
 } from "lucide-react";
 import { client } from "@/lib/apollo";
 import { ADMIN_AUTH_EVENT, ADMIN_TOKEN_KEY, resolveImage } from "@/lib/config";
@@ -51,6 +52,7 @@ const sections: NavSection[] = [
       { href: "/admin/roles", label: "Roles", Icon: ShieldCheck },
       { href: "/admin/verifications", label: "Verificaciones", Icon: BadgeCheck },
       { href: "/admin/plans", label: "Planes", Icon: Crown },
+      { href: "/admin/promo", label: "Promoción", Icon: Gift },
       { href: "/admin/payments", label: "Pagos", Icon: Wallet },
     ],
   },

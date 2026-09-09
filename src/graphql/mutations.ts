@@ -578,3 +578,24 @@ export const TRACK_SELLER_QR_SCAN = gql`
     trackSellerQrScan(sellerId: $sellerId, source: $source)
   }
 `;
+
+// ─── Promoción de planes ──────────────────────────────────────────────────────
+
+export const UPDATE_PLAN_PROMO = gql`
+  mutation UpdatePlanPromo($input: UpdatePlanPromoInput!) {
+    updatePlanPromo(input: $input) {
+      enabled
+      active
+      startsAt
+      endsAt
+      grantedPlan
+      unlockLimits
+      unlockPinned
+      unlockAutoBump
+      unlockStats
+      freeBoosts
+      bannerText
+      updatedAt
+    }
+  }
+`;
