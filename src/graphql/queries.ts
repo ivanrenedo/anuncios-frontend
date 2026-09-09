@@ -864,6 +864,7 @@ export const MY_BOOST_QUOTA = gql`
       usedThisMonth
       remainingThisMonth
       extraDiscountPct
+      promoFree
       cycleStartsAt
       cycleEndsAt
     }
@@ -944,6 +945,66 @@ export const MY_SELLER_QR_STATS = gql`
       thisMonth
       last30Days
       lastScanAt
+    }
+  }
+`;
+
+// ─── Promoción de planes ──────────────────────────────────────────────────────
+
+/** Estado público de la promo: alimenta el banner de la tienda y la app. */
+export const PLAN_PROMO = gql`
+  query PlanPromo {
+    planPromo {
+      active
+      endsAt
+      grantedPlan
+      bannerText
+      unlockLimits
+      unlockPinned
+      unlockAutoBump
+      unlockStats
+      freeBoosts
+    }
+  }
+`;
+
+/** Configuración completa, incluida una promo programada pero no iniciada. */
+export const ADMIN_PLAN_PROMO = gql`
+  query AdminPlanPromo {
+    adminPlanPromo {
+      enabled
+      active
+      startsAt
+      endsAt
+      grantedPlan
+      unlockLimits
+      unlockPinned
+      unlockAutoBump
+      unlockStats
+      freeBoosts
+      bannerText
+      updatedAt
+    }
+  }
+`;
+
+/** Lo que el usuario puede hacer ahora mismo, con la promo ya aplicada. */
+export const MY_ENTITLEMENTS = gql`
+  query MyEntitlements {
+    myEntitlements {
+      plan
+      entitlementPlan
+      promoActive
+      promoEndsAt
+      maxActiveProducts
+      maxImagesPerProduct
+      pinnedProducts
+      autoBumpSlots
+      autoBumpCadence
+      includedBoostsPerMonth
+      extraBoostDiscountPct
+      hasStats
+      freeBoosts
     }
   }
 `;

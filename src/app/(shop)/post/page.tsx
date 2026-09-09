@@ -26,6 +26,7 @@ import { PRODUCTS_BY_SELLER } from "@/graphql/queries";
 import { CREATE_PRODUCT } from "@/graphql/mutations";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
+import { useEntitlements } from "@/hooks/useEntitlements";
 import { uploadImages } from "@/lib/upload";
 import { optimizeImage } from "@/lib/imageOptimizer";
 import { getErrorMessage } from "@/lib/errors";
@@ -155,6 +156,7 @@ export default function PostPage() {
   const router = useRouter();
   const { isAuthenticated, user, loading: authLoading } = useAuth();
   const { profile } = useProfile();
+  const { entitlements, promoActive } = useEntitlements();
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [kind, setKind] = useState<Kind | null>(null);
@@ -314,17 +316,22 @@ export default function PostPage() {
   const handleSubmit = async () => {
     if (submittingRef.current) return;
 
-    // Plan limit check
+    // Plan limit check. El tope viene de los entitlements del servidor, que
+    // durante la promoción ya está ampliado — solo cambia el texto para no
+    // invitar a mejorar un plan que ahora mismo no haría falta.
     const plan = profile?.effectivePlan ?? profile?.plan ?? "FREE";
     const PLAN_NAMES: Record<string, string> = {
       FREE: "Gratis",
+      BASIC: "Básico",
       STAR: "Estrella",
       PREMIUM: "Premium",
     };
-    const limit = profile?.maxActiveProducts;
+    const limit = entitlements.maxActiveProducts ?? profile?.maxActiveProducts;
     if (limit != null && myProducts.length >= limit) {
       setError(
-        `Tu plan ${PLAN_NAMES[plan] ?? plan} permite hasta ${limit} anuncios activos. Mejora tu plan para publicar más.`,
+        promoActive
+          ? `Durante la promoción puedes tener hasta ${limit} anuncios activos. Oculta o elimina alguno para publicar otro.`
+          : `Tu plan ${PLAN_NAMES[plan] ?? plan} permite hasta ${limit} anuncios activos. Mejora tu plan para publicar más.`,
       );
       return;
     }
@@ -439,7 +446,7 @@ export default function PostPage() {
           photos={form.photos ?? []}
           setPhotos={(p) => setField("photos", p)}
           showErrors={showErrors}
-          maxPhotos={profile?.maxImagesPerProduct ?? 4}
+          maxPhotos={entitlements.maxImagesPerProduct}
         />
 
         {/* Kind-specific form */}

@@ -13,8 +13,10 @@ import {
   Zap,
   ArrowUpCircle,
   MessageCircle,
+  Gift,
 } from "lucide-react";
 import { useProfile } from "@/hooks/useProfile";
+import { usePlanPromo } from "@/hooks/useEntitlements";
 import { useBusinessContact } from "@/hooks/useBusinessContact";
 
 type PlanKey = "FREE" | "BASIC" | "STAR" | "PREMIUM";
@@ -111,12 +113,19 @@ const PLANS: PlanDef[] = [
 
 const YEARLY_DISCOUNT = 0.25;
 
+const PROMO_PLAN_LABELS: Record<string, string> = {
+  BASIC: "del plan Básico",
+  STAR: "del plan Estrella",
+  PREMIUM: "Premium",
+};
+
 function fmtXaf(n: number): string {
   return new Intl.NumberFormat("es-ES").format(n);
 }
 
 export default function PlansPage() {
   const { profile } = useProfile();
+  const { promo, active: promoActive } = usePlanPromo();
   const [cycle, setCycle] = useState<"MONTHLY" | "YEARLY">("MONTHLY");
   const { phone: contactNumber } = useBusinessContact();
 
@@ -124,6 +133,14 @@ export default function PlansPage() {
   const effectivePlan = profile?.effectivePlan ?? currentPlan;
   const expiresAt = profile?.planExpiresAt
     ? new Date(profile.planExpiresAt)
+    : null;
+
+  const promoEndsLabel = promo?.endsAt
+    ? new Date(promo.endsAt).toLocaleDateString("es-ES", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      })
     : null;
 
   const fmtDate = (d: Date) =>
@@ -169,6 +186,28 @@ export default function PlansPage() {
           dan más anuncios, más visibilidad y ventajas exclusivas.
         </p>
       </div>
+
+      {/* Promoción en curso: las funciones de pago están abiertas a todos, así
+          que el aviso va antes de los precios para no vender algo que ahora
+          mismo no hace falta pagar. */}
+      {promoActive && (
+        <div className="mx-auto mb-8 flex max-w-2xl items-start gap-3 rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-4">
+          <Gift size={20} className="mt-0.5 shrink-0 text-emerald-600" />
+          <div>
+            <p className="text-sm font-bold text-on-surface">
+              {promo?.bannerText ??
+                `Promoción de lanzamiento: funciones ${
+                  PROMO_PLAN_LABELS[promo?.grantedPlan ?? "PREMIUM"]
+                } gratis para todos`}
+            </p>
+            <p className="mt-0.5 text-sm text-on-surface-variant">
+              {promoEndsLabel
+                ? `Sin pagar nada hasta el ${promoEndsLabel}. Después vuelven a aplicarse los límites de tu plan.`
+                : "Sin pagar nada mientras dure la promoción. Después vuelven a aplicarse los límites de tu plan."}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Monthly / yearly toggle. The −25 % yearly discount comes from
           DISCOUNT_TIERS on the backend; the same fraction is shown here so the

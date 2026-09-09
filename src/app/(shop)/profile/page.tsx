@@ -33,6 +33,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
+import { useEntitlements } from "@/hooks/useEntitlements";
 import {
   useVerificationRequest,
   useRequestVerification,
@@ -120,11 +121,13 @@ export default function ProfilePage() {
   } = useVerificationRequest();
   const { loading: requestingVerification } = useRequestVerification();
 
+  // El plan pagado manda en las insignias; lo que el vendedor *puede hacer*
+  // sale de los entitlements del servidor, que ya incluyen la promoción
+  // vigente. Nunca compares planes a mano para habilitar funciones.
   const effectivePlan = profile?.effectivePlan ?? profile?.plan ?? "FREE";
-  const hasStatsAccess = effectivePlan === "STAR" || effectivePlan === "PREMIUM";
-  const hasFullStats = effectivePlan === "PREMIUM";
-  const canPin = effectivePlan === "STAR" || effectivePlan === "PREMIUM";
-  const canAutoBump = canPin;
+  const { entitlements, canPin, canAutoBump, hasStats: hasStatsAccess } =
+    useEntitlements();
+  const hasFullStats = entitlements.entitlementPlan === "PREMIUM";
   const {
     data: qrStatsData,
     refetch: refetchQrStats,
@@ -806,7 +809,7 @@ export default function ProfilePage() {
               {profile?.id && (
                 <PlanFeaturesPanel
                   userId={profile.id}
-                  effectivePlan={effectivePlan}
+                  effectivePlan={entitlements.entitlementPlan}
                   products={products}
                 />
               )}
