@@ -35,7 +35,6 @@ import FilterDrawer from "@/components/explore/FilterDrawer";
 import CategoryPickerModal from "@/components/explore/CategoryPickerModal";
 import { CATEGORY_FILTERS, SORT_LABELS, type SortOrder } from "@/lib/exploreUtils";
 import type { Product } from "@/lib/types";
-import AdSenseSlot from "@/components/AdSenseSlot";
 
 const PAGE_SIZE = 20;
 const ENTRY_FILTER_PARAMS = ["filterCat", "cat", "sectionId", "q"] as const;
@@ -744,7 +743,7 @@ function ExploreInner() {
       <div className="mb-3 flex items-center gap-2">
         <div className="flex flex-col w-full">
           {/* v2 Fase 12 — 320×50 mobile / 728×90 tablet+desktop */}
-          <AdSenseSlot
+          {/* <AdSenseSlot
             slot="9280849367"
             mobileSlot="9107061724"
             width={728}
@@ -752,7 +751,7 @@ function ExploreInner() {
             mobileWidth={320}
             mobileHeight={100}
             className="mx-auto mb-5"
-          />
+          /> */}
           <div className="flex row gap-2">
             <div className="relative flex-1">
               <Search
