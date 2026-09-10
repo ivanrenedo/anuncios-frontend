@@ -31,7 +31,6 @@ import PremiumStoresRail from "@/components/home/PremiumStoresRail";
 import ProductGrid from "@/components/ProductGrid";
 import Skeleton from "@/components/Skeleton";
 import { useUnreadCount } from "@/hooks/useNotifications";
-import AdSenseSlot from "@/components/AdSenseSlot";
 import {
   getHomeSectionIcon,
   getHomeSectionIconTone,
@@ -307,7 +306,7 @@ export default function HomePage() {
                 {idx === firstProductIdx && firstProductIdx !== -1 && (
                   <>
                   {/* v2 Fase 12 — 320×50 en mobile (<sm), 728×90 en ≥sm (tablet+desktop) */}
-                  <AdSenseSlot
+                  {/* <AdSenseSlot
                     slot="9280849367"
                     mobileSlot="9107061724"
                     width={728}
@@ -315,7 +314,7 @@ export default function HomePage() {
                     mobileWidth={320}
                     mobileHeight={50}
                     className="mx-auto mt-5"
-                  />
+                  /> */}
                     <section className="px-4 pt-6 sm:px-6">
                       <div className="grid grid-cols-3 gap-3">
                         <TrustCell

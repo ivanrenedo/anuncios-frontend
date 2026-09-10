@@ -58,7 +58,6 @@ import ProductCard, { ProductCardSkeleton } from "@/components/ProductCard";
 import ImageLightbox from "@/components/ImageLightbox";
 import SafetyModal, { type SafetyModalMode } from "@/components/SafetyModal";
 import type { Product } from "@/lib/types";
-import AdSenseSlot from "@/components/AdSenseSlot";
 
 /* ─── Inline helpers ─────────────────────────────────────────────────────── */
 
@@ -259,7 +258,7 @@ export default function ProductDetailPage({
           Placeholder mientras no hay AdSense; el div interno queda listo
           para pegar el <ins class="adsbygoogle"> cuando exista slot. */}
       {/* v2 Fase 12 — 320×50 mobile / 728×90 tablet+desktop */}
-      <AdSenseSlot
+      {/* <AdSenseSlot
         slot="9280849367"
         mobileSlot="9107061724"
         width={728}
@@ -268,7 +267,7 @@ export default function ProductDetailPage({
         mobileHeight={100}
         className="mb-5 mx-auto"
         sellerPlan={sellerPlan}
-      />
+      /> */}
 
       {/* Layout Wallapop-style: contenido centrado con dos rails de anuncios
           Half Page (300×600) sticky a los lados en escritorios anchos (≥ xl).
@@ -277,9 +276,9 @@ export default function ProductDetailPage({
           dimensione por min-content y desborde el viewport. */}
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[300px_minmax(0,1fr)_300px] xl:gap-8">
         {/* Left sticky ad rail — Half Page 300×600, sólo se muestra en xl+ */}
-        <aside className="hidden xl:block">
+        {/* <aside className="hidden xl:block">
           <AdSenseSlot slot="4548035461" width={300} height={600} className="sticky top-24" sellerPlan={sellerPlan} />
-        </aside>
+        </aside> */}
 
         {/* Center content — gallery + info apilados. `min-w-0` es clave: sin
             él, el flex-col hereda min-width: auto y se expande al contenido
@@ -794,9 +793,9 @@ export default function ProductDetailPage({
         {/* /center content wrapper */}
 
         {/* Right sticky ad rail — Half Page 300×600, sólo se muestra en xl+ */}
-        <aside className="hidden xl:block">
+       {/*  <aside className="hidden xl:block">
           <AdSenseSlot slot="4548035461" width={300} height={600} className="sticky top-24" sellerPlan={sellerPlan} />
-        </aside>
+        </aside> */}
       </div>
       {/* /grid */}
 
