@@ -276,9 +276,9 @@ export default function ProductDetailPage({
           dimensione por min-content y desborde el viewport. */}
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[300px_minmax(0,1fr)_300px] xl:gap-8">
         {/* Left sticky ad rail — Half Page 300×600, sólo se muestra en xl+ */}
-        {/* <aside className="hidden xl:block">
-          <AdSenseSlot slot="4548035461" width={300} height={600} className="sticky top-24" sellerPlan={sellerPlan} />
-        </aside> */}
+        <aside className="hidden xl:block">
+          {/* <AdSenseSlot slot="4548035461" width={300} height={600} className="sticky top-24" sellerPlan={sellerPlan} /> */}
+        </aside>
 
         {/* Center content — gallery + info apilados. `min-w-0` es clave: sin
             él, el flex-col hereda min-width: auto y se expande al contenido
@@ -793,9 +793,9 @@ export default function ProductDetailPage({
         {/* /center content wrapper */}
 
         {/* Right sticky ad rail — Half Page 300×600, sólo se muestra en xl+ */}
-       {/*  <aside className="hidden xl:block">
-          <AdSenseSlot slot="4548035461" width={300} height={600} className="sticky top-24" sellerPlan={sellerPlan} />
-        </aside> */}
+        <aside className="hidden xl:block">
+          {/* <AdSenseSlot slot="4548035461" width={300} height={600} className="sticky top-24" sellerPlan={sellerPlan} /> */}
+        </aside>
       </div>
       {/* /grid */}
 
